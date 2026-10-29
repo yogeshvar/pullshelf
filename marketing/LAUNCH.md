@@ -3,7 +3,7 @@
 Drafts only. Nothing here has been posted. Every claim below is true today; keep it that way when you edit.
 
 Links to use:
-- Site: https://pullself.vercel.app (note the spelling Vercel gave us; swap everywhere if you attach a custom domain)
+- Site: https://pullshelf.vercel.app (swap everywhere if you attach a custom domain)
 - Repo: https://github.com/yogeshvar/pullshelf
 - Install: `brew install --cask yogeshvar/pullshelf/pullshelf`
 - Demo video (scripted, not a screen recording): `docs/assets/pullshelf-demo.mp4`, GIF: `docs/assets/pullshelf-demo.gif`
@@ -14,7 +14,7 @@ Links to use:
 1. **Say the limits yourself, up front.** Apple Silicon only, macOS 13+, not notarized (first launch needs Open Anyway). People forgive this if you say it first and punish it if they find it.
 2. **Try the install on a clean account or Mac** (Homebrew and the zip). The first five minutes decide everything.
 3. **Check the site on your phone** once, in both themes.
-4. **Know the weak spots:** the domain reads `pullself` (typo), there is no auto-update yet, there is no Intel build. If asked, answer plainly.
+4. **Know the weak spots:** it is a `vercel.app` subdomain (a custom domain would look more serious), there is no auto-update yet, there is no Intel build. If asked, answer plainly.
 5. **Be there for 24 hours** after posting. Reply to every comment; fix what people report.
 6. Consider notarizing first ($99/yr Apple Developer Program). It removes the biggest friction for a wider audience. Optional for a small first launch.
 
@@ -39,7 +39,7 @@ Links to use:
 >
 > Honest limits: Apple Silicon only, macOS 13+, not notarized yet (first launch needs System Settings > Privacy & Security > Open Anyway), no auto-update yet. `brew install --cask yogeshvar/pullshelf/pullshelf` or the zip from GitHub.
 >
-> Repo: https://github.com/yogeshvar/pullshelf  Site: https://pullself.vercel.app
+> Repo: https://github.com/yogeshvar/pullshelf  Site: https://pullshelf.vercel.app
 >
 > I'd love feedback on the gesture feel and on what the terminal pane is missing.
 
@@ -72,7 +72,7 @@ Do not post the same text in many subreddits on the same day.
 2. The terminal is a real PTY. I run Claude Code in it. Send a clip or note straight into it.
 3. No account, no telemetry, no network calls from the app. MIT.
 4. Honest limits: Apple Silicon, macOS 13+, not notarized yet.
-5. `brew install --cask yogeshvar/pullshelf/pullshelf` or https://pullself.vercel.app
+5. `brew install --cask yogeshvar/pullshelf/pullshelf` or https://pullshelf.vercel.app
 
 ## LinkedIn
 

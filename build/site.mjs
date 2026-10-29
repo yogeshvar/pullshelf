@@ -5,8 +5,8 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const docs = resolve(dirname(fileURLToPath(import.meta.url)), '../docs')
-// The live address. Note the spelling: Vercel assigned pullself.vercel.app. Change this one line when a custom domain is attached.
-const SITE = 'https://pullself.vercel.app'
+// The live address. Change this one line when a custom domain is attached.
+const SITE = 'https://pullshelf.vercel.app'
 const REPO = 'https://github.com/yogeshvar/pullshelf'
 const ZIP = `${REPO}/releases/download/v0.1.1/Pullshelf-0.1.1-arm64.zip`
 const BREW = 'brew install --cask yogeshvar/pullshelf/pullshelf'

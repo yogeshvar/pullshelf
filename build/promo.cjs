@@ -18,7 +18,7 @@ body{margin:0;width:1080px;height:1920px;background:radial-gradient(700px 700px 
 .cap{margin-top:26px;font:500 24px/1.4 IN;color:#a39d91}
 </style><div class=top>Your Mac's missing <em>shelf.</em></div>
 <div class=sub>Terminal, clipboard history, files and notes. One pull from the top of the screen.</div>
-<div class=bot><span class=pill>Free · Open source · macOS</span><div class=url>pullself.vercel.app</div><div class=cap>A scripted demo of the real interface, not a screen recording.</div></div>`
+<div class=bot><span class=pill>Free · Open source · macOS</span><div class=url>pullshelf.vercel.app</div><div class=cap>A scripted demo of the real interface, not a screen recording.</div></div>`
 app.whenReady().then(async () => {
   const win = new BrowserWindow({ width: 1080, height: 1920, show: false, useContentSize: true, webPreferences: { webSecurity: false } })
   await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))

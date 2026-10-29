@@ -5,7 +5,7 @@ cask "pullshelf" do
   url "https://github.com/yogeshvar/pullshelf/releases/download/v#{version}/Pullshelf-#{version}-arm64.zip"
   name "Pullshelf"
   desc "Pull-down shelf for notes, clipboard history and terminals"
-  homepage "https://pullself.vercel.app/"
+  homepage "https://pullshelf.vercel.app/"
 
   livecheck do
     url :url
