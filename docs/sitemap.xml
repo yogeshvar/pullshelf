@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://pullshelf.com/</loc></url>
-  <url><loc>https://pullshelf.com/features.html</loc></url>
-  <url><loc>https://pullshelf.com/download.html</loc></url>
-  <url><loc>https://pullshelf.com/support.html</loc></url>
-  <url><loc>https://pullshelf.com/changelog.html</loc></url>
-  <url><loc>https://pullshelf.com/privacy.html</loc></url>
-  <url><loc>https://pullshelf.com/press.html</loc></url>
+  <url><loc>https://pullself.vercel.app/</loc></url>
+  <url><loc>https://pullself.vercel.app/features.html</loc></url>
+  <url><loc>https://pullself.vercel.app/download.html</loc></url>
+  <url><loc>https://pullself.vercel.app/support.html</loc></url>
+  <url><loc>https://pullself.vercel.app/changelog.html</loc></url>
+  <url><loc>https://pullself.vercel.app/privacy.html</loc></url>
+  <url><loc>https://pullself.vercel.app/press.html</loc></url>
 </urlset>

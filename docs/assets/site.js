@@ -27,10 +27,15 @@
   // copy buttons
   document.querySelectorAll('[data-copy]').forEach(function (btn) {
     btn.addEventListener('click', function () {
+      if (window.va) window.va('event', { name: 'copy_brew' })
       var text = btn.getAttribute('data-copy')
       var done = function () { var t = btn.textContent; btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = t }, 1400) }
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () {})
     })
+  })
+
+  document.querySelectorAll('a[href*="releases/download"]').forEach(function (a) {
+    a.addEventListener('click', function () { if (window.va) window.va('event', { name: 'download_zip' }) })
   })
 
   // reveal helper used when motion is off or the libraries failed to load

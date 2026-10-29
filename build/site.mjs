@@ -1,11 +1,12 @@
 // Generates the static site in docs/ (home, features, download, support, changelog, privacy, press, 404,
-// sitemap.xml, robots.txt, CNAME). Plain files out, no runtime framework. Run: node build/site.mjs
+// sitemap.xml, robots.txt, vercel.json). Plain files out, no runtime framework. Run: node build/site.mjs
 import { writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const docs = resolve(dirname(fileURLToPath(import.meta.url)), '../docs')
-const SITE = 'https://pullshelf.com'
+// The live address. Note the spelling: Vercel assigned pullself.vercel.app. Change this one line when a custom domain is attached.
+const SITE = 'https://pullself.vercel.app'
 const REPO = 'https://github.com/yogeshvar/pullshelf'
 const ZIP = `${REPO}/releases/download/v0.1.1/Pullshelf-0.1.1-arm64.zip`
 const BREW = 'brew install --cask yogeshvar/pullshelf/pullshelf'
@@ -25,7 +26,7 @@ function shelf({ hero = false } = {}) {
 <span class="ln"><span class="p">›</span> <span class="caret"></span></span></div></div>
       <div class="pane clips"><div class="ph">Clipboard</div>
         <div class="clip">npm run build<small>just now</small></div>
-        <div class="clip">https://pullshelf.com<small>2m</small></div>
+        <div class="clip">https://example.com/docs<small>2m</small></div>
         <div class="clip">Meeting notes, Friday<small>9m</small></div></div>
       <div class="pane files"><div class="ph">Files</div><div class="tiles">
         <div class="tile"><i>PDF</i>invoice</div><div class="tile"><i>PNG</i>mock</div><div class="tile"><i>ZIP</i>assets</div><div class="tile"><i>TXT</i>todo</div></div></div>
@@ -45,6 +46,7 @@ function head({ title, desc, path, extra = '' }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title}</title>
 <meta name="description" content="${desc}">
+<meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="canonical" href="${url}">
 <meta name="theme-color" content="#121110">
 <meta property="og:type" content="website"><meta property="og:site_name" content="Pullshelf">
@@ -69,6 +71,8 @@ function nav(current) {
 const foot = `<footer><div class="wrap foot"><div><a class="brand" href="index.html"><i></i>Pullshelf</a><p>A pull-down shelf for the Mac.<br>MIT licensed. No telemetry.</p>
 <p>Not affiliated with Anthropic or OpenAI.</p></div>
 <ul><li><a href="features.html">Features</a></li><li><a href="download.html">Download</a></li><li><a href="support.html">Support</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="privacy.html">Privacy</a></li><li><a href="press.html">Press</a></li><li><a href="${REPO}">GitHub</a></li></ul></div></footer>
+<script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)}</script>
+<script defer src="/_vercel/insights/script.js"></script><script defer src="/_vercel/speed-insights/script.js"></script>
 <script src="assets/vendor/gsap.min.js" defer></script><script src="assets/vendor/ScrollTrigger.min.js" defer></script><script src="assets/vendor/lenis.min.js" defer></script><script src="assets/site.js" defer></script>
 </body></html>`
 
@@ -221,7 +225,7 @@ page({
 <p>Pullshelf has <strong>no telemetry, no accounts and no cloud sync</strong>. It makes no network calls of its own.</p>
 <h2>What is stored, and where</h2><p>Clipboard history, notes and file references are kept in a local database under <code>~/Library/Application Support/Pullshelf</code>. Notes are also mirrored as Markdown files in that folder. Delete the folder to remove everything.</p>
 <h2>Permissions</h2><p>Accessibility is used only to detect the two-finger pull at the top screen edge. Pullshelf reads scroll events for that and nothing else.</p>
-<h2>This website</h2><p>It loads no third-party scripts, fonts or trackers, and sets no cookies. Your theme choice is kept in your browser's local storage.</p></div></div>`
+<h2>This website</h2><p>It sets no cookies and loads no third-party fonts or trackers. It uses Vercel Web Analytics and Speed Insights, served from this same site, to count page views and measure load speed in aggregate; they do not use cookies or track you across sites. Your theme choice is kept in your browser's local storage. The app itself has no analytics.</p></div></div>`
 })
 
 page({
@@ -243,5 +247,15 @@ page({
 const urls = ['', 'features.html', 'download.html', 'support.html', 'changelog.html', 'privacy.html', 'press.html']
 writeFileSync(resolve(docs, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${SITE}/${u}</loc></url>`).join('\n')}\n</urlset>\n`)
 writeFileSync(resolve(docs, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`)
-writeFileSync(resolve(docs, 'CNAME'), 'pullshelf.com\n')
+writeFileSync(resolve(docs, 'vercel.json'), JSON.stringify({
+  headers: [
+    { source: '/(.*)', headers: [
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'X-Frame-Options', value: 'DENY' },
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' }
+    ] },
+    { source: '/assets/(.*)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] }
+  ]
+}, null, 2) + '\n')
 console.log('site: wrote', urls.length + 1, 'pages')

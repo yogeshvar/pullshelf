@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://pullshelf.com/sitemap.xml
+Sitemap: https://pullself.vercel.app/sitemap.xml
