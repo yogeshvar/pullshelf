@@ -6,9 +6,9 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('currentTheme', () => {
   it('uses the saved choice first', () => {
-    localStorage.setItem('perch-theme', 'light')
+    localStorage.setItem('pullshelf-theme', 'light')
     expect(currentTheme()).toBe('light')
-    localStorage.setItem('perch-theme', 'dark')
+    localStorage.setItem('pullshelf-theme', 'dark')
     setSystemPrefersLight(true)
     expect(currentTheme()).toBe('dark')
   })
@@ -17,16 +17,23 @@ describe('currentTheme', () => {
     expect(currentTheme()).toBe('dark')
     setSystemPrefersLight(true)
     expect(currentTheme()).toBe('light')
-    localStorage.setItem('perch-theme', 'sepia')
+    localStorage.setItem('pullshelf-theme', 'sepia')
     expect(currentTheme()).toBe('light')
   })
 
   it('carries over the choice saved when the app was called Ledge', () => {
     localStorage.setItem('ledge-theme', 'light')
     expect(currentTheme()).toBe('light')
-    expect(localStorage.getItem('perch-theme')).toBe('light')
+    expect(localStorage.getItem('pullshelf-theme')).toBe('light')
     localStorage.setItem('ledge-theme', 'dark') // later changes under the old key are not read again
     expect(currentTheme()).toBe('light')
+  })
+
+  it('carries over the choice saved when the app was called Perch, ahead of an older Ledge choice', () => {
+    localStorage.setItem('perch-theme', 'light')
+    localStorage.setItem('ledge-theme', 'dark')
+    expect(currentTheme()).toBe('light')
+    expect(localStorage.getItem('pullshelf-theme')).toBe('light')
   })
 
   it('still works when storage is unavailable', () => {
@@ -51,7 +58,7 @@ describe('applyTheme and setTheme', () => {
 
   it('remembers the choice, and still applies it when storage fails', () => {
     setTheme('light')
-    expect(localStorage.getItem('perch-theme')).toBe('light')
+    expect(localStorage.getItem('pullshelf-theme')).toBe('light')
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota')
     })

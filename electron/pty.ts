@@ -192,8 +192,8 @@ async function userEnv(shell: string): Promise<NodeJS.ProcessEnv> {
     ...process.env,
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
-    TERM_PROGRAM: 'Perch',
-    PERCH: '1'
+    TERM_PROGRAM: 'Pullshelf',
+    PULLSHELF: '1'
   }
   // Rc files that export TERM=xterm-kitty override ours; let that name resolve.
   const kittyInfo = '/Applications/kitty.app/Contents/Resources/terminfo'
@@ -201,8 +201,8 @@ async function userEnv(shell: string): Promise<NodeJS.ProcessEnv> {
     env.TERMINFO_DIRS = [env.TERMINFO_DIRS, kittyInfo].filter(Boolean).join(':')
   }
   try {
-    const output = await run(shell, ['-ilc', String.raw`printf '\n__PERCH_PATH__%s__PERCH_PATH__\n' "$PATH"`])
-    const match = output.match(/__PERCH_PATH__(.*)__PERCH_PATH__/)
+    const output = await run(shell, ['-ilc', String.raw`printf '\n__PULLSHELF_PATH__%s__PULLSHELF_PATH__\n' "$PATH"`])
+    const match = output.match(/__PULLSHELF_PATH__(.*)__PULLSHELF_PATH__/)
     if (match?.[1]?.includes('/')) env.PATH = match[1]
   } catch {
     // Keep the environment Electron was launched with.
@@ -214,10 +214,10 @@ async function which(shell: string, bin: string, env: NodeJS.ProcessEnv): Promis
   try {
     const output = await run(
       shell,
-      ['-ilc', String.raw`printf '\n__PERCH_BIN__%s__PERCH_BIN__\n' "$(command -v ${bin})"`],
+      ['-ilc', String.raw`printf '\n__PULLSHELF_BIN__%s__PULLSHELF_BIN__\n' "$(command -v ${bin})"`],
       env
     )
-    const match = output.match(/__PERCH_BIN__(.*)__PERCH_BIN__/)
+    const match = output.match(/__PULLSHELF_BIN__(.*)__PULLSHELF_BIN__/)
     const found = match?.[1]?.trim()
     return found && found.startsWith('/') ? found : null
   } catch {

@@ -16,10 +16,10 @@ afterEach(() => {
 describe('starting up', () => {
   it('names the app and, once ready, hides the Dock icon and opens the database', async () => {
     const m = await bootMain()
-    expect(m.app.setName).toHaveBeenCalledWith('Perch')
+    expect(m.app.setName).toHaveBeenCalledWith('Pullshelf')
     expect(m.app.setActivationPolicy).toHaveBeenCalledWith('accessory')
     expect(m.app.dock.hide).toHaveBeenCalled()
-    expect(existsSync(join(m.electronState.userData, 'perch.db'))).toBe(true)
+    expect(existsSync(join(m.electronState.userData, 'pullshelf.db'))).toBe(true)
     expect(existsSync(join(m.electronState.userData, 'notes'))).toBe(true)
     expect(m.clipboard.startClipboard).toHaveBeenCalledWith(expect.anything(), m.electronState.userData)
   })
@@ -59,7 +59,7 @@ describe('starting up', () => {
 
   it('refuses to run on anything but macOS', async () => {
     const m = await bootMain({ platform: 'linux' })
-    await vi.waitFor(() => expect(m.dialog.showErrorBox).toHaveBeenCalledWith('Perch', 'Perch runs on macOS.'))
+    await vi.waitFor(() => expect(m.dialog.showErrorBox).toHaveBeenCalledWith('Pullshelf', 'Pullshelf runs on macOS.'))
     expect(m.app.quit).toHaveBeenCalled()
     expect(m.BrowserWindow.instances).toHaveLength(0)
   })
@@ -76,7 +76,7 @@ describe('saved preferences and older data', () => {
   const saved = { presetId: 'shell', customCommand: '', cwd: '/legacy', toolRatio: 0.4, clipRatio: 0.18, filesRatio: 0.2, heightRatio: 0.52 } as const
 
   it('leaves the menu-bar icon out when it was turned off last time', async () => {
-    const dir = join(tempDir(), 'Perch')
+    const dir = join(tempDir(), 'Pullshelf')
     const db = openDatabase(dir)
     writeSettings(db, { ...saved, showTrayIcon: false })
     db.close()
@@ -85,6 +85,21 @@ describe('saved preferences and older data', () => {
     expect(m.globalShortcut.register).toHaveBeenCalled()
     m.ipcMain.send('app:set-tray-visible', true)
     expect(m.Tray.instances).toHaveLength(1)
+  })
+
+  it('brings a Perch 0.1 install along, ahead of an older Ledge folder', async () => {
+    const support = tempDir()
+    const perch = openDatabase(join(support, 'Perch'))
+    writeSettings(perch, { ...saved, showTrayIcon: true, cwd: '/from-perch' })
+    perch.close()
+    const ledge = openDatabase(join(support, 'Ledge'))
+    writeSettings(ledge, { ...saved, showTrayIcon: true, cwd: '/from-ledge' })
+    ledge.close()
+    const m = await bootMain({ beforeImport: (e) => (e.electronState.userData = join(support, 'Pullshelf')) })
+    const state = (await m.ipcMain.invoke('app:get-state')) as { settings: { cwd: string } }
+    expect(state.settings.cwd).toBe('/from-perch')
+    expect(existsSync(join(support, 'Perch'))).toBe(false)
+    expect(existsSync(join(support, 'Ledge'))).toBe(true)
   })
 
   it('brings the data of the app\'s old name along before opening the database', async () => {
@@ -97,16 +112,16 @@ describe('saved preferences and older data', () => {
     legacy.close()
     mkdirSync(join(support, 'Ledge', 'notes'))
     writeFileSync(join(support, 'Ledge', 'notes', 'a.md'), 'kept')
-    const m = await bootMain({ beforeImport: (e) => (e.electronState.userData = join(support, 'Perch')) })
+    const m = await bootMain({ beforeImport: (e) => (e.electronState.userData = join(support, 'Pullshelf')) })
     const state = (await m.ipcMain.invoke('app:get-state')) as { settings: { cwd: string } }
     expect(state.settings.cwd).toBe('/legacy')
     expect(existsSync(join(support, 'Ledge'))).toBe(false)
-    expect(existsSync(join(support, 'Perch', 'notes', 'a.md'))).toBe(true)
-    const db = openDatabase(join(support, 'Perch'))
+    expect(existsSync(join(support, 'Pullshelf', 'notes', 'a.md'))).toBe(true)
+    const db = openDatabase(join(support, 'Pullshelf'))
     expect(readSettings(db, '/x').cwd).toBe('/legacy')
     // Image clips must follow the folder, or their previews would point at a place that no longer exists.
     expect(db.prepare('SELECT image_path FROM clips WHERE id = ?').get('img')).toEqual({
-      image_path: join(support, 'Perch', 'clips', 'img.png')
+      image_path: join(support, 'Pullshelf', 'clips', 'img.png')
     })
   })
 })
@@ -180,8 +195,8 @@ describe('app lifecycle events', () => {
     const m = await bootMain()
     m.app.fire('child-process-gone', {}, { type: 'GPU', reason: 'crashed', exitCode: 5 })
     m.win().webContents.fire('render-process-gone', {}, { reason: 'oom', exitCode: 9 })
-    expect(error).toHaveBeenCalledWith('[perch] child process gone:', 'GPU', 'crashed', 5)
-    expect(error).toHaveBeenCalledWith('[perch] renderer gone:', 'oom', 9)
+    expect(error).toHaveBeenCalledWith('[pullshelf] child process gone:', 'GPU', 'crashed', 5)
+    expect(error).toHaveBeenCalledWith('[pullshelf] renderer gone:', 'oom', 9)
   })
 })
 
@@ -207,14 +222,14 @@ describe('the window', () => {
     expect(dev.win().loadURL).toHaveBeenCalledWith('http://localhost:5173')
   })
 
-  it('opens itself on launch only when PERCH_SHOW=1', async () => {
-    const quiet = await bootMain({ env: { PERCH_SHOW: undefined } })
+  it('opens itself on launch only when PULLSHELF_SHOW=1', async () => {
+    const quiet = await bootMain({ env: { PULLSHELF_SHOW: undefined } })
     quiet.win().fire('ready-to-show')
     expect(quiet.win().show).not.toHaveBeenCalled()
-    const eager = await bootMain({ env: { PERCH_SHOW: '1' } })
-    process.env.PERCH_SHOW = '1'
+    const eager = await bootMain({ env: { PULLSHELF_SHOW: '1' } })
+    process.env.PULLSHELF_SHOW = '1'
     eager.win().fire('ready-to-show')
-    delete process.env.PERCH_SHOW
+    delete process.env.PULLSHELF_SHOW
     expect(eager.win().show).toHaveBeenCalled()
   })
 

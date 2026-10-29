@@ -16,25 +16,25 @@ export function ClipboardPane({
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   async function copy(clip: Clip) {
-    await window.perch.copyClip(clip.id)
+    await window.pullshelf.copyClip(clip.id)
     setCopiedId(clip.id)
     window.setTimeout(() => setCopiedId((current) => (current === clip.id ? null : current)), 1200)
   }
 
   async function send(text: string) {
-    const result = await window.perch.sendToTool(text)
+    const result = await window.pullshelf.sendToTool(text)
     onToast(result.ok ? 'Sent to the tool' : result.error ?? 'Could not send')
   }
 
   async function claude(text: string) {
-    const result = await window.perch.openInClaude(text, 'chat')
+    const result = await window.pullshelf.openInClaude(text, 'chat')
     if (!result.ok) onToast(result.error ?? 'Could not open Claude Desktop')
   }
 
   return (
     <section className={collapsed ? 'pane collapsed' : 'pane'}>
       <PaneHead title="Clipboard" collapsed={collapsed} onToggle={onToggle} count={clips.length}>
-        <button type="button" className="text-btn" onClick={() => void window.perch.clearHistory()}>
+        <button type="button" className="text-btn" onClick={() => void window.pullshelf.clearHistory()}>
           Clear
         </button>
       </PaneHead>
@@ -62,12 +62,12 @@ export function ClipboardPane({
                 <button
                   type="button"
                   className={clip.favorite ? 'star on' : 'star'}
-                  onClick={() => void window.perch.toggleFavorite(clip.id)}
+                  onClick={() => void window.pullshelf.toggleFavorite(clip.id)}
                   aria-label={clip.favorite ? 'Unfavorite' : 'Favorite'}
                 >
                   ★
                 </button>
-                <button type="button" onClick={() => void window.perch.deleteClip(clip.id)} aria-label="Delete">
+                <button type="button" onClick={() => void window.pullshelf.deleteClip(clip.id)} aria-label="Delete">
                   ✕
                 </button>
               </div>

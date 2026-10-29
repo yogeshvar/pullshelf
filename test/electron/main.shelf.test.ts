@@ -47,7 +47,7 @@ describe('the menu-bar icon', () => {
     const m = await booted()
     const tray = m.Tray.instances[0]
     expect((tray.image as { setTemplateImage: unknown }).setTemplateImage).toHaveBeenCalledWith(true)
-    expect(tray.setToolTip).toHaveBeenCalledWith('Perch')
+    expect(tray.setToolTip).toHaveBeenCalledWith('Pullshelf')
     tray.fire('click')
     await advance(600)
     expect(m.win().bounds.y).toBe(OPEN_Y)
@@ -63,7 +63,7 @@ describe('the menu-bar icon', () => {
     expect(m.Tray.instances[0].popUpContextMenu).toHaveBeenCalledWith({ template: items })
     // A dev build has no "Launch at login".
     expect(items.map((i) => i.label)).toEqual([
-      'Show Perch', undefined, 'Hide menu bar icon', 'Enable scroll gesture…', 'Toggle Developer Tools', undefined, 'Quit Perch'
+      'Show Pullshelf', undefined, 'Hide menu bar icon', 'Enable scroll gesture…', 'Toggle Developer Tools', undefined, 'Quit Pullshelf'
     ])
     expect(item(items, 'Enable scroll gesture…').enabled).toBe(true)
     expect(item(items, 'Toggle Developer Tools').visible).toBe(true)
@@ -72,7 +72,7 @@ describe('the menu-bar icon', () => {
     m.gesture.gestureTrusted.mockReturnValue(true)
     m.electronState.isPackaged = true
     items = menu(m)
-    expect(items[0].label).toBe('Hide Perch')
+    expect(items[0].label).toBe('Hide Pullshelf')
     expect(items[0].accelerator).toBe('CommandOrControl+Shift+L')
     expect(item(items, 'Scroll gesture on')).toMatchObject({ enabled: false })
     expect(item(items, 'Toggle Developer Tools').visible).toBe(false)
@@ -88,9 +88,9 @@ describe('the menu-bar icon', () => {
     expect(m.gesture.promptGestureTrust).toHaveBeenCalled()
     click(items, 'Toggle Developer Tools')
     expect(m.win().webContents.toggleDevTools).toHaveBeenCalled()
-    click(items, 'Quit Perch')
+    click(items, 'Quit Pullshelf')
     expect(m.app.quit).toHaveBeenCalled()
-    click(items, 'Show Perch')
+    click(items, 'Show Pullshelf')
     await advance(600)
     expect(m.win().bounds.y).toBe(OPEN_Y)
   })

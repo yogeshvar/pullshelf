@@ -270,7 +270,7 @@ describe('files handlers', () => {
     expect(await m.ipcMain.invoke('files:add', 'nope')).toEqual([])
     // Make every insert fail from a second connection to the same database.
     const Database = (await import('better-sqlite3')).default
-    const other = new Database(`${m.electronState.userData}/perch.db`)
+    const other = new Database(`${m.electronState.userData}/pullshelf.db`)
     other.exec(`CREATE TRIGGER no_inserts BEFORE INSERT ON files BEGIN SELECT RAISE(ABORT, 'disk full'); END`)
     other.close()
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)

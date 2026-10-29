@@ -84,24 +84,24 @@ export function ToolPane({
     term.loadAddon(fit)
     term.open(host)
     fit.fit()
-    window.perch.resizePty(term.cols, term.rows)
-    term.onData((data) => window.perch.writePty(data))
+    window.pullshelf.resizePty(term.cols, term.rows)
+    term.onData((data) => window.pullshelf.writePty(data))
 
     const flush = (rev: number, chunk: string) => {
       if (rev <= seen) return
       term.write(chunk)
       seen = rev
     }
-    const offData = window.perch.onPtyData((message) => {
+    const offData = window.pullshelf.onPtyData((message) => {
       if (!ready) pending.push(message)
       else flush(message.rev, message.chunk)
     })
-    const offReset = window.perch.onPtyReset(() => {
+    const offReset = window.pullshelf.onPtyReset(() => {
       term.reset()
       seen = 0
       pending.length = 0
     })
-    void window.perch.ptySnapshot().then((snap) => {
+    void window.pullshelf.ptySnapshot().then((snap) => {
       if (disposed) return
       if (snap.buffer) term.write(snap.buffer)
       seen = snap.rev
@@ -114,13 +114,13 @@ export function ToolPane({
       // Collapsed (hidden) pane measures 0 wide; don't shrink the PTY to nothing.
       if (host.clientWidth < 80 || host.clientHeight < 40) return
       fit.fit()
-      window.perch.resizePty(term.cols, term.rows)
+      window.pullshelf.resizePty(term.cols, term.rows)
     }
     // Swap colours in place so the running session survives a theme change.
     const offTheme = onTheme((theme) => {
       term.options.theme = XTERM_THEMES[theme]
     })
-    const offShown = window.perch.onShown(() => {
+    const offShown = window.pullshelf.onShown(() => {
       requestAnimationFrame(() => {
         refit()
         term.focus()
@@ -152,7 +152,7 @@ export function ToolPane({
       {!status.running ? (
         <div className="exit-bar">
           <span>{status.error ?? (status.exitCode == null ? 'Waiting to start' : `Exited (${status.exitCode})`)}</span>
-          <button type="button" onClick={() => void window.perch.restartTool()}>
+          <button type="button" onClick={() => void window.pullshelf.restartTool()}>
             Start
           </button>
         </div>

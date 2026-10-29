@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS: Settings = {
 
 export function openDatabase(userData: string): Database.Database {
   mkdirSync(userData, { recursive: true })
-  const db = new Database(join(userData, 'perch.db'))
+  const db = new Database(join(userData, 'pullshelf.db'))
   db.pragma('journal_mode = WAL')
   db.exec(`
     CREATE TABLE IF NOT EXISTS clips (
@@ -122,7 +122,7 @@ function clampRatio(value: unknown, fallback: number, min: number, max: number):
   return Math.min(max, Math.max(min, value))
 }
 
-// Image clips store absolute file paths. After the data folder moved from Ledge to Perch,
+// Image clips store absolute file paths. After the data folder moved from Ledge to Pullshelf,
 // point them at the new location so previews and copy-again keep working. Safe to repeat.
 export function rebaseClipImagePaths(db: Database.Database, from: string, to: string): void {
   const prefix = from.endsWith('/') ? from : `${from}/`

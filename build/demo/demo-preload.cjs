@@ -52,7 +52,7 @@ window.__demo = {
     window.__demo.fire('files', [...state.files])
   }
 }
-window.perch = new Proxy(base, {
+window.pullshelf = new Proxy(base, {
   get(target, key) {
     if (key in target) return target[key]
     if (typeof key === 'string' && key.startsWith('on')) return () => () => {}

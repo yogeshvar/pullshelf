@@ -19,7 +19,7 @@ const base = {
   fileInfo: async () => ({ kind: 'file', ext: 'TXT', thumb: null })
 }
 window.__calls = calls
-window.perch = new Proxy(base, {
+window.pullshelf = new Proxy(base, {
   get(target, key) {
     if (key in target) return target[key]
     if (typeof key === 'string' && key.startsWith('on')) return noop

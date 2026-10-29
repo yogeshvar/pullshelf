@@ -1,12 +1,12 @@
 import { act } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { installPerch } from '../helpers/perch'
+import { installPullshelf } from '../helpers/pullshelf'
 import { setSystemPrefersLight } from '../helpers/setup-dom'
 
 describe('renderer entry point', () => {
   it('applies the theme and mounts the app into #root', async () => {
     vi.resetModules()
-    installPerch()
+    installPullshelf()
     setSystemPrefersLight(true)
     document.body.innerHTML = '<div id="root"></div>'
     await act(async () => {
@@ -18,7 +18,7 @@ describe('renderer entry point', () => {
 
   it('fails loudly when the page has no #root', async () => {
     vi.resetModules()
-    installPerch()
+    installPullshelf()
     document.body.innerHTML = ''
     await expect(import('../../src/main')).rejects.toThrow('Missing root')
   })

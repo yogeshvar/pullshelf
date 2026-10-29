@@ -19,7 +19,7 @@ function listen<T>(channel: string, callback: (payload: T) => void): () => void 
   return () => ipcRenderer.removeListener(channel, listener)
 }
 
-const perch = {
+const pullshelf = {
   hide: () => ipcRenderer.send('shelf:hide'),
   getState: (): Promise<AppState> => ipcRenderer.invoke('app:get-state'),
   saveLayout: (tool: number, clips: number, files: number): Promise<void> =>
@@ -69,6 +69,6 @@ const perch = {
   onPrefs: (callback: (prefs: Prefs) => void) => listen('prefs:changed', callback)
 }
 
-contextBridge.exposeInMainWorld('perch', perch)
+contextBridge.exposeInMainWorld('pullshelf', pullshelf)
 
-export type PerchApi = typeof perch
+export type PullshelfApi = typeof pullshelf

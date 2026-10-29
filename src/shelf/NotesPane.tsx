@@ -47,7 +47,7 @@ export function NotesPane({
     if (!id) return
     return () => {
       const latest = draftRef.current
-      if (latest !== savedBody.current) void window.perch.updateNote(id, latest)
+      if (latest !== savedBody.current) void window.pullshelf.updateNote(id, latest)
     }
   }, [selected?.id])
 
@@ -56,7 +56,7 @@ export function NotesPane({
     const id = selected.id
     const body = draft
     const timer = window.setTimeout(() => {
-      void window.perch.updateNote(id, body)
+      void window.pullshelf.updateNote(id, body)
     }, 350)
     return () => window.clearTimeout(timer)
   }, [draft, draftNoteId, selected])
@@ -93,7 +93,7 @@ export function NotesPane({
   }
 
   async function create() {
-    const note = await window.perch.createNote()
+    const note = await window.pullshelf.createNote()
     setSelectedId(note.id)
     closeMenus()
     window.setTimeout(() => editorRef.current?.focus(), 0)
@@ -124,7 +124,7 @@ export function NotesPane({
     setRenamingId(null)
     const note = notes.find((item) => item.id === id)
     // Clearing the field hands the title back to the note's first line.
-    if (note && renameDraft.trim() !== note.title) void window.perch.renameNote(id, renameDraft.trim())
+    if (note && renameDraft.trim() !== note.title) void window.pullshelf.renameNote(id, renameDraft.trim())
   }
 
   async function remove(id: string) {
@@ -132,19 +132,19 @@ export function NotesPane({
       setConfirmingId(id)
       return
     }
-    const remaining = await window.perch.deleteNote(id)
+    const remaining = await window.pullshelf.deleteNote(id)
     if (id === selectedId) setSelectedId(remaining[0]?.id ?? null)
     setConfirmingId(null)
   }
 
   async function send() {
     if (!draft.trim()) return
-    const result = await window.perch.sendToTool(draft)
+    const result = await window.pullshelf.sendToTool(draft)
     onToast(result.ok ? 'Sent to the tool' : result.error ?? 'Could not send')
   }
 
   async function openClaude(mode: 'chat' | 'code') {
-    const result = await window.perch.openInClaude(draft, mode)
+    const result = await window.pullshelf.openInClaude(draft, mode)
     if (!result.ok) onToast(result.error ?? 'Could not open Claude Desktop')
   }
 

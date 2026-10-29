@@ -1,4 +1,4 @@
-// Renders the website demo: drives the real, built Perch interface in a hidden Electron window
+// Renders the website demo: drives the real, built Pullshelf interface in a hidden Electron window
 // on a fixed timeline and writes one PNG per frame. Not a screen recording of a live session.
 // Usage: electron stage.cjs <renderer-dir> <frames-dir>
 const { app, BrowserWindow } = require('electron')
@@ -65,7 +65,7 @@ app.whenReady().then(async () => {
   })
   await win.loadFile(path.join(rendererDir, 'index.html'))
   const run = (js) => win.webContents.executeJavaScript(js)
-  await run(`localStorage.setItem('perch-theme', 'light'); localStorage.removeItem('perch-collapsed'); location.reload()`)
+  await run(`localStorage.setItem('pullshelf-theme', 'light'); localStorage.removeItem('pullshelf-collapsed'); location.reload()`)
   await wait(1500)
   await run(STAGE_JS)
   await wait(300)

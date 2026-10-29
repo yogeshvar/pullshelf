@@ -15,7 +15,7 @@ describe('openDatabase', () => {
   it('creates the data directory and every table', () => {
     const dir = join(tempDir(), 'nested', 'data')
     const db = openDatabase(dir)
-    expect(existsSync(join(dir, 'perch.db'))).toBe(true)
+    expect(existsSync(join(dir, 'pullshelf.db'))).toBe(true)
     expect(names(db)).toEqual(expect.arrayContaining(['clips', 'files', 'notes', 'settings']))
   })
 
@@ -33,7 +33,7 @@ describe('openDatabase', () => {
 
   it('upgrades a notes table created before title_locked existed and keeps its rows', () => {
     const dir = tempDir()
-    const old = new Database(join(dir, 'perch.db'))
+    const old = new Database(join(dir, 'pullshelf.db'))
     old.exec(`CREATE TABLE notes (id TEXT PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL,
       created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`)
     old.prepare('INSERT INTO notes VALUES (?, ?, ?, ?, ?)').run('keep', 'Old note', 'text', 1, 2)
@@ -160,23 +160,23 @@ describe('rebaseClipImagePaths', () => {
     addClip(db, 'c', '/elsewhere/c.png')
     addClip(db, 'd', '/Support/LedgeOther/clips/d.png') // same prefix text, different folder
     addClip(db, 'e', null)
-    rebaseClipImagePaths(db, '/Support/Ledge', '/Support/Perch')
+    rebaseClipImagePaths(db, '/Support/Ledge', '/Support/Pullshelf')
     const expected = [
-      ['a', '/Support/Perch/clips/a.png'],
-      ['b', '/Support/Perch/clips/nested/b.png'],
+      ['a', '/Support/Pullshelf/clips/a.png'],
+      ['b', '/Support/Pullshelf/clips/nested/b.png'],
       ['c', '/elsewhere/c.png'],
       ['d', '/Support/LedgeOther/clips/d.png'],
       ['e', null]
     ]
     expect(paths(db)).toEqual(expected)
-    rebaseClipImagePaths(db, '/Support/Ledge', '/Support/Perch')
+    rebaseClipImagePaths(db, '/Support/Ledge', '/Support/Pullshelf')
     expect(paths(db)).toEqual(expected)
   })
 
   it('accepts folder paths that already end in a slash', () => {
     const db = openDatabase(tempDir())
     addClip(db, 'a', '/Support/Ledge/clips/a.png')
-    rebaseClipImagePaths(db, '/Support/Ledge/', '/Support/Perch/')
-    expect(paths(db)).toEqual([['a', '/Support/Perch/clips/a.png']])
+    rebaseClipImagePaths(db, '/Support/Ledge/', '/Support/Pullshelf/')
+    expect(paths(db)).toEqual([['a', '/Support/Pullshelf/clips/a.png']])
   })
 })

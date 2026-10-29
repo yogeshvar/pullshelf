@@ -1,6 +1,6 @@
-// Builds a distributable Perch: UI bundle, Swift helper, electron-builder, then prints zip path, size and SHA-256.
-// Usage: npm run package          -> release/Perch-<version>-arm64.zip
-//        npm run package:dir      -> release/mac-arm64/Perch.app only (no zip, faster)
+// Builds a distributable Pullshelf: UI bundle, Swift helper, electron-builder, then prints zip path, size and SHA-256.
+// Usage: npm run package          -> release/Pullshelf-<version>-arm64.zip
+//        npm run package:dir      -> release/mac-arm64/Pullshelf.app only (no zip, faster)
 import { spawnSync } from 'node:child_process'
 import { readFileSync, statSync, existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -25,7 +25,7 @@ function fail(message) {
   process.exit(1)
 }
 
-if (process.platform !== 'darwin') fail('Perch only packages on macOS.')
+if (process.platform !== 'darwin') fail('Pullshelf only packages on macOS.')
 if (spawnSync('swiftc', ['--version'], { stdio: 'ignore' }).status !== 0) {
   fail('swiftc is missing, so the gesture helper cannot be compiled. Install the Xcode command line tools: xcode-select --install')
 }
@@ -39,12 +39,12 @@ run(
   `Compiling GestureHelper (arm64, macOS ${MIN_MACOS}+)`
 )
 if (!existsSync(resolve(root, 'native/bin/GestureHelper'))) fail('native/bin/GestureHelper was not produced')
-run('npx', ['electron-builder', '--mac', ...(dirOnly ? ['--dir'] : ['zip']), '--arm64'], dirOnly ? 'Packaging Perch.app' : 'Packaging Perch zip')
+run('npx', ['electron-builder', '--mac', ...(dirOnly ? ['--dir'] : ['zip']), '--arm64'], dirOnly ? 'Packaging Pullshelf.app' : 'Packaging Pullshelf zip')
 
 if (dirOnly) {
-  console.log(`\nApp: ${resolve(root, 'release/mac-arm64/Perch.app')}`)
+  console.log(`\nApp: ${resolve(root, 'release/mac-arm64/Pullshelf.app')}`)
 } else {
-  const zip = resolve(root, `release/Perch-${version}-arm64.zip`)
+  const zip = resolve(root, `release/Pullshelf-${version}-arm64.zip`)
   if (!existsSync(zip)) fail(`expected artifact not found: ${zip}`)
   const sha = spawnSync('shasum', ['-a', '256', zip], { encoding: 'utf8' }).stdout.split(' ')[0]
   console.log(`\nZip:    ${zip}\nSize:   ${statSync(zip).size} bytes\nSHA256: ${sha}`)

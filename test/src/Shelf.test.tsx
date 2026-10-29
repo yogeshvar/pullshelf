@@ -2,10 +2,10 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Shelf } from '../../src/shelf/Shelf'
 import type { AppState } from '../../src/shared/types'
-import { installPerch, makeClip, makeFile, makeNote, makeState } from '../helpers/perch'
+import { installPullshelf, makeClip, makeFile, makeNote, makeState } from '../helpers/pullshelf'
 
 async function renderShelf(state: AppState = makeState(), overrides: Record<string, unknown> = {}) {
-  const bridge = installPerch(state, overrides)
+  const bridge = installPullshelf(state, overrides)
   const view = render(<Shelf />)
   await act(async () => undefined) // let getState resolve
   return { ...bridge, ...view }
@@ -46,7 +46,7 @@ describe('loading', () => {
 
   it('keeps showing the placeholder state until then, and ignores a late answer after unmount', async () => {
     let resolve: (state: AppState) => void = () => undefined
-    installPerch(makeState(), { getState: vi.fn(() => new Promise<AppState>((r) => (resolve = r))) })
+    installPullshelf(makeState(), { getState: vi.fn(() => new Promise<AppState>((r) => (resolve = r))) })
     const { unmount } = render(<Shelf />)
     expect(screen.getByText('Waiting to start')).toBeInTheDocument()
     unmount()
@@ -69,10 +69,10 @@ describe('loading', () => {
   })
 
   it('shows the Accessibility banner only while the gesture is not trusted', async () => {
-    const { perch, emit } = await renderShelf(makeState({ gestureTrusted: false }))
+    const { pullshelf, emit } = await renderShelf(makeState({ gestureTrusted: false }))
     expect(screen.getByText(/Allow Accessibility to enable the pull gesture/)).toBeInTheDocument()
     click('Allow')
-    expect(perch.promptGesture).toHaveBeenCalled()
+    expect(pullshelf.promptGesture).toHaveBeenCalled()
     act(() => emit('trust', true))
     expect(screen.queryByText(/Allow Accessibility to enable the pull gesture/)).not.toBeInTheDocument()
   })
@@ -126,7 +126,7 @@ describe('layout', () => {
   it('remembers collapsed panes across restarts', async () => {
     const first = await renderShelf()
     click('Collapse Files')
-    expect(JSON.parse(localStorage.getItem('perch-collapsed') as string)).toEqual({ tool: false, clips: false, files: true, notes: false })
+    expect(JSON.parse(localStorage.getItem('pullshelf-collapsed') as string)).toEqual({ tool: false, clips: false, files: true, notes: false })
     first.unmount()
     await renderShelf()
     expect(screen.getByRole('button', { name: 'Expand Files' })).toBeInTheDocument()
@@ -136,15 +136,22 @@ describe('layout', () => {
     localStorage.setItem('ledge-collapsed', JSON.stringify({ tool: false, clips: true, files: false, notes: false }))
     await renderShelf()
     expect(screen.getByRole('button', { name: 'Expand Clipboard' })).toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('perch-collapsed') as string)).toMatchObject({ clips: true })
+    expect(JSON.parse(localStorage.getItem('pullshelf-collapsed') as string)).toMatchObject({ clips: true })
+  })
+
+  it('carries over collapsed panes saved when the app was called Perch', async () => {
+    localStorage.setItem('perch-collapsed', JSON.stringify({ tool: false, clips: false, files: true, notes: false }))
+    await renderShelf()
+    expect(screen.getByRole('button', { name: 'Expand Files' })).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('pullshelf-collapsed') as string)).toMatchObject({ files: true })
   })
 
   it('starts fully open when the saved state is unusable', async () => {
-    localStorage.setItem('perch-collapsed', JSON.stringify({ tool: true, clips: true, files: true, notes: true }))
+    localStorage.setItem('pullshelf-collapsed', JSON.stringify({ tool: true, clips: true, files: true, notes: true }))
     await renderShelf()
     expect(panes().some((p) => p.classList.contains('collapsed'))).toBe(false)
     document.body.innerHTML = ''
-    localStorage.setItem('perch-collapsed', '{not json')
+    localStorage.setItem('pullshelf-collapsed', '{not json')
     await renderShelf()
     expect(panes().some((p) => p.classList.contains('collapsed'))).toBe(false)
   })
@@ -162,7 +169,7 @@ describe('layout', () => {
   })
 
   it('treats unknown fields in saved collapse state as open', async () => {
-    localStorage.setItem('perch-collapsed', JSON.stringify({ clips: true }))
+    localStorage.setItem('pullshelf-collapsed', JSON.stringify({ clips: true }))
     await renderShelf()
     expect(screen.getByRole('button', { name: 'Expand Clipboard' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Collapse Terminal' })).toBeInTheDocument()
@@ -178,13 +185,13 @@ describe('dragging dividers', () => {
     fireEvent.pointerMove(window, { clientX: to })
     fireEvent[end](window)
   }
-  const saved = (perch: ReturnType<typeof installPerch>['perch']) => perch.saveLayout.mock.calls.at(-1) as number[]
+  const saved = (pullshelf: ReturnType<typeof installPullshelf>['pullshelf']) => pullshelf.saveLayout.mock.calls.at(-1) as number[]
 
   it('moves space between the two panes beside the divider, and saves the layout', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     paneWidths(widths)
     drag(0, 500, 600)
-    const [tool, clips, files] = saved(perch)
+    const [tool, clips, files] = saved(pullshelf)
     expect(tool).toBeCloseTo(share(700))
     expect(clips).toBeCloseTo(share(200))
     expect(files).toBeCloseTo(share(250))
@@ -192,56 +199,56 @@ describe('dragging dividers', () => {
   })
 
   it('shrinking leftwards grows the right-hand pane', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     paneWidths(widths)
     drag(0, 500, 400)
-    const [tool, clips] = saved(perch)
+    const [tool, clips] = saved(pullshelf)
     expect(tool).toBeCloseTo(share(500))
     expect(clips).toBeCloseTo(share(400))
   })
 
   it('pushes into the next pane once a neighbour reaches its minimum width', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     paneWidths(widths)
     drag(0, 500, 650) // clipboard can give 100, files 50
-    const [tool, clips, files] = saved(perch)
+    const [tool, clips, files] = saved(pullshelf)
     expect(tool).toBeCloseTo(share(750))
     expect(clips).toBeCloseTo(share(200))
     expect(files).toBeCloseTo(share(200))
   })
 
   it('pushes leftwards through the panes on the left when dragging left', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     paneWidths(widths)
     drag(2, 900, 700) // notes grows by 200: files gives 50, clipboard 100, terminal 50
-    const [tool, clips, files] = saved(perch)
+    const [tool, clips, files] = saved(pullshelf)
     expect(tool).toBeCloseTo(share(550))
     expect(clips).toBeCloseTo(share(200))
     expect(files).toBeCloseTo(share(200))
   })
 
   it('stops at the minimums when dragged absurdly far', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     paneWidths(widths)
     drag(0, 500, 5000)
-    const [tool, clips, files] = saved(perch)
+    const [tool, clips, files] = saved(pullshelf)
     expect(clips).toBeCloseTo(share(200))
     expect(files).toBeCloseTo(share(200))
     expect(tool).toBeCloseTo(share(1450 - 200 - 200 - 220))
   })
 
   it('works around collapsed panes: the divider beside a rail resizes the panes either side', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     click('Collapse Clipboard')
     paneWidths([600, 40, 250, 300])
     drag(1, 700, 760) // divider between the rail and Files: terminal vs files
-    const [tool, , files] = saved(perch)
+    const [tool, , files] = saved(pullshelf)
     // Only the open panes (1150px) share the weights; the rail's weight is untouched.
     expect(tool / files).toBeCloseTo(660 / 200, 1)
   })
 
   it('does nothing when the divider has no open pane on the left, or the right pane is collapsed', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     click('Collapse Terminal')
     paneWidths([40, 300, 250, 300])
     fireEvent.pointerDown(dividers()[0], { clientX: 100 })
@@ -250,11 +257,11 @@ describe('dragging dividers', () => {
     click('Collapse Clipboard')
     fireEvent.pointerDown(dividers()[0], { clientX: 100 })
     expect(document.body.classList.contains('resizing')).toBe(false)
-    expect(perch.saveLayout).not.toHaveBeenCalled()
+    expect(pullshelf.saveLayout).not.toHaveBeenCalled()
   })
 
   it('marks the page as resizing only while dragging, and ignores moves afterwards', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     paneWidths(widths)
     fireEvent.pointerDown(dividers()[0], { clientX: 500 })
     expect(document.body.classList.contains('resizing')).toBe(true)
@@ -264,22 +271,22 @@ describe('dragging dividers', () => {
     const after = columns()
     fireEvent.pointerMove(window, { clientX: 900 })
     expect(columns()).toBe(after)
-    expect(perch.saveLayout).toHaveBeenCalledTimes(1)
+    expect(pullshelf.saveLayout).toHaveBeenCalledTimes(1)
   })
 
   it('a cancelled pointer ends the drag too', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     paneWidths(widths)
     drag(0, 500, 560, 'pointerCancel')
-    expect(perch.saveLayout).toHaveBeenCalledTimes(1)
+    expect(pullshelf.saveLayout).toHaveBeenCalledTimes(1)
     expect(document.body.classList.contains('resizing')).toBe(false)
   })
 
   it('copes with a layout that has no measurable width', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     paneWidths([0, 0, 0, 0])
     expect(() => drag(0, 0, 50)).not.toThrow()
-    expect(perch.saveLayout).toHaveBeenCalled()
+    expect(pullshelf.saveLayout).toHaveBeenCalled()
   })
 })
 
@@ -312,21 +319,21 @@ describe('the settings handle', () => {
   })
 
   it('switching the tool tells the main process', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     open()
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'codex' } })
-    expect(perch.configureTool).toHaveBeenCalledWith({ presetId: 'codex' })
+    expect(pullshelf.configureTool).toHaveBeenCalledWith({ presetId: 'codex' })
     expect(screen.getByRole('combobox')).toHaveValue('codex')
   })
 
   it('a custom tool asks for a command and applies it on submit', async () => {
-    const { perch } = await renderShelf(makeState({ settings: { ...makeState().settings, presetId: 'custom', customCommand: 'htop' } }))
+    const { pullshelf } = await renderShelf(makeState({ settings: { ...makeState().settings, presetId: 'custom', customCommand: 'htop' } }))
     open()
     const input = screen.getByPlaceholderText('command to run') as HTMLInputElement
     expect(input.value).toBe('htop')
     fireEvent.change(input, { target: { value: 'btop' } })
     fireEvent.submit(input.closest('form') as HTMLFormElement)
-    expect(perch.configureTool).toHaveBeenCalledWith({ customCommand: 'btop' })
+    expect(pullshelf.configureTool).toHaveBeenCalledWith({ customCommand: 'btop' })
   })
 
   it('only shows the command field for the custom tool', async () => {
@@ -338,10 +345,10 @@ describe('the settings handle', () => {
   })
 
   it('hides the shelf from the menu', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     open()
     click(/Hide shelf/)
-    expect(perch.hide).toHaveBeenCalled()
+    expect(pullshelf.hide).toHaveBeenCalled()
     expect(screen.getByText('⌘⇧L')).toBeInTheDocument()
   })
 
@@ -353,20 +360,20 @@ describe('the settings handle', () => {
   })
 
   it('quits from the menu', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     open()
-    click('Quit Perch')
-    expect(perch.quit).toHaveBeenCalledTimes(1)
+    click('Quit Pullshelf')
+    expect(pullshelf.quit).toHaveBeenCalledTimes(1)
   })
 
   it('hides or shows the menu-bar icon, following the saved setting and later changes', async () => {
-    const { perch, emit } = await renderShelf()
+    const { pullshelf, emit } = await renderShelf()
     open()
     click('Hide menu bar icon')
-    expect(perch.setTrayVisible).toHaveBeenLastCalledWith(false)
+    expect(pullshelf.setTrayVisible).toHaveBeenLastCalledWith(false)
     act(() => emit('prefs', { showTrayIcon: false, launchAtLogin: false }))
     click('Show menu bar icon')
-    expect(perch.setTrayVisible).toHaveBeenLastCalledWith(true)
+    expect(pullshelf.setTrayVisible).toHaveBeenLastCalledWith(true)
     act(() => emit('prefs', { showTrayIcon: true, launchAtLogin: false }))
     expect(screen.getByRole('button', { name: 'Hide menu bar icon' })).toBeInTheDocument()
   })
@@ -382,21 +389,21 @@ describe('the settings handle', () => {
     open()
     expect(screen.queryByRole('menuitemcheckbox')).not.toBeInTheDocument()
     document.body.innerHTML = ''
-    const { perch, emit } = await renderShelf(makeState({ canAutoLaunch: true }))
+    const { pullshelf, emit } = await renderShelf(makeState({ canAutoLaunch: true }))
     open()
     const row = () => screen.getByRole('menuitemcheckbox', { name: /Launch at login/ })
     expect(row()).toHaveAttribute('aria-checked', 'false')
     fireEvent.click(row())
-    expect(perch.setLaunchAtLogin).toHaveBeenLastCalledWith(true)
+    expect(pullshelf.setLaunchAtLogin).toHaveBeenLastCalledWith(true)
     act(() => emit('prefs', { showTrayIcon: true, launchAtLogin: true }))
     expect(row()).toHaveAttribute('aria-checked', 'true')
     expect(row()).toHaveTextContent('✓')
     fireEvent.click(row())
-    expect(perch.setLaunchAtLogin).toHaveBeenLastCalledWith(false)
+    expect(pullshelf.setLaunchAtLogin).toHaveBeenLastCalledWith(false)
   })
 
   it('shows the scroll gesture status and lets you enable it only when it is off', async () => {
-    const { perch, emit } = await renderShelf()
+    const { pullshelf, emit } = await renderShelf()
     open()
     const row = () => screen.getByRole('button', { name: /Scroll gesture/ })
     expect(row()).toHaveTextContent('On')
@@ -405,7 +412,7 @@ describe('the settings handle', () => {
     expect(row()).toHaveTextContent('Enable…')
     expect(row()).toBeEnabled()
     fireEvent.click(row())
-    expect(perch.promptGesture).toHaveBeenCalled()
+    expect(pullshelf.promptGesture).toHaveBeenCalled()
   })
 
   it('stops listening for preference changes when it goes away', async () => {
@@ -440,36 +447,36 @@ describe('resizing the shelf height', () => {
   const grip = () => document.querySelector('.resize-grip') as HTMLElement
 
   it('follows the pointer, at most once per frame, and finishes on release', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     fireEvent.pointerDown(grip(), { screenY: 500, pointerId: 3 })
     expect(Element.prototype.setPointerCapture).toHaveBeenCalledWith(3)
-    expect(perch.keepOpen).toHaveBeenCalled()
+    expect(pullshelf.keepOpen).toHaveBeenCalled()
     fireEvent.pointerMove(grip(), { screenY: 560 })
     fireEvent.pointerMove(grip(), { screenY: 580 })
     expect(frames).toHaveLength(1)
     act(() => frames[0](0))
-    expect(perch.resizeShelf).toHaveBeenCalledWith(window.innerHeight + 80)
+    expect(pullshelf.resizeShelf).toHaveBeenCalledWith(window.innerHeight + 80)
     fireEvent.pointerUp(grip())
-    expect(perch.resizeShelf).toHaveBeenLastCalledWith(window.innerHeight + 80)
-    expect(perch.resizeShelfEnd).toHaveBeenCalled()
+    expect(pullshelf.resizeShelf).toHaveBeenLastCalledWith(window.innerHeight + 80)
+    expect(pullshelf.resizeShelfEnd).toHaveBeenCalled()
   })
 
   it('releasing before the next frame cancels it and still applies the final height', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     fireEvent.pointerDown(grip(), { screenY: 500 })
     fireEvent.pointerMove(grip(), { screenY: 450 })
     fireEvent.pointerUp(grip())
     expect(cancelAnimationFrame).toHaveBeenCalled()
-    expect(perch.resizeShelf).toHaveBeenCalledTimes(1)
-    expect(perch.resizeShelf).toHaveBeenCalledWith(window.innerHeight - 50)
+    expect(pullshelf.resizeShelf).toHaveBeenCalledTimes(1)
+    expect(pullshelf.resizeShelf).toHaveBeenCalledWith(window.innerHeight - 50)
   })
 
   it('a click without movement keeps the current height; cancel ends the drag like release', async () => {
-    const { perch } = await renderShelf()
+    const { pullshelf } = await renderShelf()
     fireEvent.pointerDown(grip(), { screenY: 500 })
     fireEvent.pointerCancel(grip())
-    expect(perch.resizeShelf).toHaveBeenCalledWith(window.innerHeight)
-    expect(perch.resizeShelfEnd).toHaveBeenCalledTimes(1)
+    expect(pullshelf.resizeShelf).toHaveBeenCalledWith(window.innerHeight)
+    expect(pullshelf.resizeShelfEnd).toHaveBeenCalledTimes(1)
     fireEvent.pointerMove(grip(), { screenY: 700 }) // listeners were removed
     expect(frames).toHaveLength(0)
   })
@@ -480,8 +487,8 @@ describe('notices and guards', () => {
   afterEach(() => vi.useRealTimers())
 
   it('shows a toast from a pane and removes it after 2.4 seconds', async () => {
-    const { perch } = await renderShelf(makeState({ clips: [makeClip({ text: 'x' })] }))
-    perch.sendToTool.mockResolvedValue({ ok: false, error: 'Nothing is running' })
+    const { pullshelf } = await renderShelf(makeState({ clips: [makeClip({ text: 'x' })] }))
+    pullshelf.sendToTool.mockResolvedValue({ ok: false, error: 'Nothing is running' })
     await act(async () => {
       click('Send')
     })
@@ -493,8 +500,8 @@ describe('notices and guards', () => {
   })
 
   it('a second toast restarts the timer', async () => {
-    const { perch } = await renderShelf(makeState({ clips: [makeClip({ text: 'x' })] }))
-    perch.sendToTool.mockResolvedValueOnce({ ok: false, error: 'first' }).mockResolvedValueOnce({ ok: false, error: 'second' })
+    const { pullshelf } = await renderShelf(makeState({ clips: [makeClip({ text: 'x' })] }))
+    pullshelf.sendToTool.mockResolvedValueOnce({ ok: false, error: 'first' }).mockResolvedValueOnce({ ok: false, error: 'second' })
     await act(async () => {
       click('Send')
     })

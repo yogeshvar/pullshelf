@@ -27,7 +27,7 @@ vi.mock('node:fs', async (importOriginal) => ({
   existsSync: vi.fn((path: string) => existing.has(path))
 }))
 
-const RESOURCES = '/Applications/Perch.app/Contents/Resources/GestureHelper'
+const RESOURCES = '/Applications/Pullshelf.app/Contents/Resources/GestureHelper'
 
 async function load() {
   vi.resetModules()
@@ -42,7 +42,7 @@ beforeEach(() => {
   spawned.length = 0
   existing.clear()
   existing.add(RESOURCES)
-  Object.defineProperty(process, 'resourcesPath', { value: '/Applications/Perch.app/Contents/Resources', configurable: true })
+  Object.defineProperty(process, 'resourcesPath', { value: '/Applications/Pullshelf.app/Contents/Resources', configurable: true })
 })
 
 afterEach(() => {

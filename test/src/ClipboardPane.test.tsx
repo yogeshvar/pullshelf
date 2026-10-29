@@ -1,10 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ClipboardPane } from '../../src/shelf/ClipboardPane'
-import { installPerch, makeClip } from '../helpers/perch'
+import { installPullshelf, makeClip } from '../helpers/pullshelf'
 
 const setup = (clips = [makeClip()], collapsed = false) => {
-  const bridge = installPerch()
+  const bridge = installPullshelf()
   const onToast = vi.fn()
   const onToggle = vi.fn()
   const view = render(<ClipboardPane clips={clips} onToast={onToast} collapsed={collapsed} onToggle={onToggle} />)
@@ -66,11 +66,11 @@ describe('ClipboardPane list', () => {
 
 describe('ClipboardPane actions', () => {
   it('copying a clip says "Copied" briefly', async () => {
-    const { perch } = setup([makeClip({ id: 'a' })])
+    const { pullshelf } = setup([makeClip({ id: 'a' })])
     await act(async () => {
       fireEvent.click(screen.getByText('copied text'))
     })
-    expect(perch.copyClip).toHaveBeenCalledWith('a')
+    expect(pullshelf.copyClip).toHaveBeenCalledWith('a')
     expect(screen.getByText('Copied')).toBeInTheDocument()
     act(() => {
       vi.advanceTimersByTime(1200)
@@ -100,18 +100,18 @@ describe('ClipboardPane actions', () => {
   })
 
   it('send reports success or the reason it failed', async () => {
-    const { perch, onToast } = setup([makeClip({ text: 'hello' })])
+    const { pullshelf, onToast } = setup([makeClip({ text: 'hello' })])
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     })
-    expect(perch.sendToTool).toHaveBeenCalledWith('hello')
+    expect(pullshelf.sendToTool).toHaveBeenCalledWith('hello')
     expect(onToast).toHaveBeenLastCalledWith('Sent to the tool')
-    perch.sendToTool.mockResolvedValueOnce({ ok: false, error: 'Nothing is running in the tool pane.' })
+    pullshelf.sendToTool.mockResolvedValueOnce({ ok: false, error: 'Nothing is running in the tool pane.' })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     })
     expect(onToast).toHaveBeenLastCalledWith('Nothing is running in the tool pane.')
-    perch.sendToTool.mockResolvedValueOnce({ ok: false })
+    pullshelf.sendToTool.mockResolvedValueOnce({ ok: false })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     })
@@ -119,18 +119,18 @@ describe('ClipboardPane actions', () => {
   })
 
   it('opening in Claude stays quiet on success and explains a failure', async () => {
-    const { perch, onToast } = setup([makeClip({ text: 'hello' })])
+    const { pullshelf, onToast } = setup([makeClip({ text: 'hello' })])
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Claude' }))
     })
-    expect(perch.openInClaude).toHaveBeenCalledWith('hello', 'chat')
+    expect(pullshelf.openInClaude).toHaveBeenCalledWith('hello', 'chat')
     expect(onToast).not.toHaveBeenCalled()
-    perch.openInClaude.mockResolvedValueOnce({ ok: false, error: 'No handler' })
+    pullshelf.openInClaude.mockResolvedValueOnce({ ok: false, error: 'No handler' })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Claude' }))
     })
     expect(onToast).toHaveBeenLastCalledWith('No handler')
-    perch.openInClaude.mockResolvedValueOnce({ ok: false })
+    pullshelf.openInClaude.mockResolvedValueOnce({ ok: false })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Claude' }))
     })
@@ -138,12 +138,12 @@ describe('ClipboardPane actions', () => {
   })
 
   it('favourite, delete and clear go to the main process', () => {
-    const { perch } = setup([makeClip({ id: 'z' })])
+    const { pullshelf } = setup([makeClip({ id: 'z' })])
     fireEvent.click(screen.getByRole('button', { name: 'Favorite' }))
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
-    expect(perch.toggleFavorite).toHaveBeenCalledWith('z')
-    expect(perch.deleteClip).toHaveBeenCalledWith('z')
-    expect(perch.clearHistory).toHaveBeenCalled()
+    expect(pullshelf.toggleFavorite).toHaveBeenCalledWith('z')
+    expect(pullshelf.deleteClip).toHaveBeenCalledWith('z')
+    expect(pullshelf.clearHistory).toHaveBeenCalled()
   })
 })

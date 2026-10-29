@@ -26,11 +26,11 @@ import { isPresetId, type Settings, type ToolConfig } from '../src/shared/types'
 const SHORTCUT = 'CommandOrControl+Shift+L'
 const SHORTCUT_LABEL = '⌘⇧L'
 
-app.setName('Perch')
+app.setName('Pullshelf')
 
 if (process.platform !== 'darwin') {
   app.whenReady().then(() => {
-    dialog.showErrorBox('Perch', 'Perch runs on macOS.')
+    dialog.showErrorBox('Pullshelf', 'Pullshelf runs on macOS.')
     app.quit()
   })
 } else {
@@ -93,11 +93,11 @@ function boot(): void {
     app.setActivationPolicy('accessory')
     app.dock?.hide()
     const userData = app.getPath('userData')
-    // Before Perch the app was called Ledge; bring its data along before the database opens.
-    const legacyDir = join(dirname(userData), 'Ledge')
-    migrateLegacyData(userData, legacyDir)
+    // Before Pullshelf the app was called Perch, and before that Ledge; bring the newest data along before the database opens.
+    const legacyDirs = ['Perch', 'Ledge'].map((name) => join(dirname(userData), name))
+    for (const legacyDir of legacyDirs) migrateLegacyData(userData, legacyDir)
     database = openDatabase(userData)
-    rebaseClipImagePaths(database, legacyDir, userData)
+    for (const legacyDir of legacyDirs) rebaseClipImagePaths(database, legacyDir, userData)
     settings = readSettings(database, homedir())
     startNotes(database, userData)
     startFiles(database)
@@ -177,10 +177,10 @@ function createWindow(): void {
     if (url !== win?.webContents.getURL()) event.preventDefault()
   })
   win.webContents.on('render-process-gone', (_event, details) => {
-    console.error('[perch] renderer gone:', details.reason, details.exitCode)
+    console.error('[pullshelf] renderer gone:', details.reason, details.exitCode)
   })
   app.on('child-process-gone', (_event, details) => {
-    console.error('[perch] child process gone:', details.type, details.reason, details.exitCode)
+    console.error('[pullshelf] child process gone:', details.type, details.reason, details.exitCode)
   })
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -189,7 +189,7 @@ function createWindow(): void {
   })
 
   win.once('ready-to-show', () => {
-    if (process.env.PERCH_SHOW === '1') showShelf()
+    if (process.env.PULLSHELF_SHOW === '1') showShelf()
   })
 
   registerIpc()
@@ -200,7 +200,7 @@ function createTray(): void {
   image.setTemplateImage(true)
   const created = new Tray(image)
   tray = created // keep a reference so the tray icon is not garbage collected
-  created.setToolTip('Perch')
+  created.setToolTip('Pullshelf')
   created.on('click', toggleShelf)
   created.on('right-click', () => {
     created.popUpContextMenu(buildMenu())
@@ -210,7 +210,7 @@ function createTray(): void {
 function buildMenu(): Menu {
   return Menu.buildFromTemplate([
     {
-      label: visible ? 'Hide Perch' : 'Show Perch',
+      label: visible ? 'Hide Pullshelf' : 'Show Pullshelf',
       accelerator: SHORTCUT,
       click: toggleShelf
     },
@@ -238,7 +238,7 @@ function buildMenu(): Menu {
       click: () => win?.webContents.toggleDevTools()
     },
     { type: 'separator' },
-    { label: 'Quit Perch', click: () => app.quit() }
+    { label: 'Quit Pullshelf', click: () => app.quit() }
   ])
 }
 

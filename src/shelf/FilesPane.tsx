@@ -22,7 +22,7 @@ export function FilesPane({
     for (const file of files) {
       if (requested.current.has(file.id)) continue
       requested.current.add(file.id)
-      void window.perch
+      void window.pullshelf
         .fileInfo(file.id)
         .then((info) => setInfos((current) => ({ ...current, [file.id]: info })))
         .catch(() => undefined)
@@ -37,13 +37,13 @@ export function FilesPane({
     event.preventDefault()
     setOver(false)
     const paths = Array.from(event.dataTransfer.files)
-      .map((file) => window.perch.pathForFile(file))
+      .map((file) => window.pullshelf.pathForFile(file))
       .filter(Boolean)
-    if (paths.length) void window.perch.addFiles(paths)
+    if (paths.length) void window.pullshelf.addFiles(paths)
   }
 
   async function open(file: ShelfFile) {
-    const result = await window.perch.openFile(file.id)
+    const result = await window.pullshelf.openFile(file.id)
     if (!result.ok) onToast(result.error ?? 'Could not open the file')
   }
 
@@ -52,7 +52,7 @@ export function FilesPane({
       className={[collapsed ? 'pane files-pane collapsed' : 'pane files-pane', over ? 'over' : ''].join(' ').trim()}
       onDragEnter={(event) => {
         if (!hasFiles(event)) return
-        window.perch.keepOpen()
+        window.pullshelf.keepOpen()
         setOver(true)
       }}
       onDragOver={(event) => {
@@ -67,7 +67,7 @@ export function FilesPane({
     >
       <PaneHead title="Files" collapsed={collapsed} onToggle={onToggle} count={files.length}>
         {files.length ? (
-          <button type="button" className="text-btn" onClick={() => void window.perch.clearFiles()}>
+          <button type="button" className="text-btn" onClick={() => void window.pullshelf.clearFiles()}>
             Clear
           </button>
         ) : null}
@@ -86,17 +86,17 @@ export function FilesPane({
                 onClick={() => void open(file)}
                 onDragStart={(event) => {
                   event.preventDefault()
-                  window.perch.dragFile(file.id)
+                  window.pullshelf.dragFile(file.id)
                 }}
               >
                 <FileGlyph info={infos[file.id]} />
                 <span className="file-name">{file.name}</span>
               </button>
               <div className="file-actions">
-                <button type="button" onClick={() => window.perch.revealFile(file.id)} aria-label="Show in Finder" title="Show in Finder">
+                <button type="button" onClick={() => window.pullshelf.revealFile(file.id)} aria-label="Show in Finder" title="Show in Finder">
                   ⌕
                 </button>
-                <button type="button" onClick={() => void window.perch.removeFile(file.id)} aria-label="Remove" title="Remove from shelf">
+                <button type="button" onClick={() => void window.pullshelf.removeFile(file.id)} aria-label="Remove" title="Remove from shelf">
                   ✕
                 </button>
               </div>

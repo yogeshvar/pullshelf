@@ -4,19 +4,19 @@ async function load() {
   vi.resetModules()
   const electron = await import('../mocks/electron')
   await import('../../electron/preload')
-  const perch = electron.contextBridge.exposed.perch as Record<string, (...args: unknown[]) => unknown>
-  return { ...electron, perch }
+  const pullshelf = electron.contextBridge.exposed.pullshelf as Record<string, (...args: unknown[]) => unknown>
+  return { ...electron, pullshelf }
 }
 
 describe('preload bridge', () => {
-  it('exposes one `perch` object to the page', async () => {
-    const { contextBridge, perch } = await load()
+  it('exposes one `pullshelf` object to the page', async () => {
+    const { contextBridge, pullshelf } = await load()
     expect(contextBridge.exposeInMainWorld).toHaveBeenCalledTimes(1)
-    expect(contextBridge.exposeInMainWorld).toHaveBeenCalledWith('perch', perch)
+    expect(contextBridge.exposeInMainWorld).toHaveBeenCalledWith('pullshelf', pullshelf)
   })
 
   it('fire-and-forget methods use ipcRenderer.send with the right channel and arguments', async () => {
-    const { ipcRenderer, perch } = await load()
+    const { ipcRenderer, pullshelf } = await load()
     const cases: [string, unknown[], string, unknown[]][] = [
       ['hide', [], 'shelf:hide', []],
       ['writePty', ['ls'], 'pty:write', ['ls']],
@@ -33,13 +33,13 @@ describe('preload bridge', () => {
     ]
     for (const [method, args, channel, sent] of cases) {
       ipcRenderer.send.mockClear()
-      perch[method](...args)
+      pullshelf[method](...args)
       expect(ipcRenderer.send, method).toHaveBeenCalledWith(channel, ...sent)
     }
   })
 
   it('request methods use ipcRenderer.invoke and return its promise', async () => {
-    const { ipcRenderer, perch } = await load()
+    const { ipcRenderer, pullshelf } = await load()
     ipcRenderer.invoke.mockResolvedValue('answer' as never)
     const cases: [string, unknown[], string, unknown[]][] = [
       ['getState', [], 'app:get-state', []],
@@ -65,19 +65,19 @@ describe('preload bridge', () => {
     ]
     for (const [method, args, channel, sent] of cases) {
       ipcRenderer.invoke.mockClear()
-      await expect(perch[method](...args), method).resolves.toBe('answer')
+      await expect(pullshelf[method](...args), method).resolves.toBe('answer')
       expect(ipcRenderer.invoke, method).toHaveBeenCalledWith(channel, ...sent)
     }
   })
 
   it('resolves a dropped file to its real path with webUtils', async () => {
-    const { webUtils, perch } = await load()
-    expect(perch.pathForFile({ name: 'a.txt' })).toBe('/dropped/a.txt')
+    const { webUtils, pullshelf } = await load()
+    expect(pullshelf.pathForFile({ name: 'a.txt' })).toBe('/dropped/a.txt')
     expect(webUtils.getPathForFile).toHaveBeenCalledWith({ name: 'a.txt' })
   })
 
   it('subscribes to each event channel and returns an unsubscribe function', async () => {
-    const { ipcRenderer, perch } = await load()
+    const { ipcRenderer, pullshelf } = await load()
     const events: [string, string][] = [
       ['onPtyData', 'pty:data'],
       ['onPtyReset', 'pty:reset'],
@@ -92,7 +92,7 @@ describe('preload bridge', () => {
     ]
     for (const [method, channel] of events) {
       const callback = vi.fn()
-      const off = perch[method](callback) as () => void
+      const off = pullshelf[method](callback) as () => void
       ipcRenderer.deliver(channel, { payload: channel })
       expect(callback, method).toHaveBeenCalledWith({ payload: channel })
       off()

@@ -6,7 +6,7 @@ import { afterEach } from 'vitest'
 const dirs: string[] = []
 
 /** A throwaway directory removed after the current test. */
-export function tempDir(prefix = 'perch-test-'): string {
+export function tempDir(prefix = 'pullshelf-test-'): string {
   const dir = mkdtempSync(join(tmpdir(), prefix))
   dirs.push(dir)
   return dir

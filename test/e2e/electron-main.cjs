@@ -18,7 +18,7 @@ async function main() {
   const send = (type, x, y, extra = {}) => win.webContents.sendInputEvent({ type, x, y, button: 'left', clickCount: 1, ...extra })
 
   const reload = async (collapsed) => {
-    await run(`localStorage.setItem('perch-collapsed', ${JSON.stringify(JSON.stringify(collapsed))}); location.reload()`)
+    await run(`localStorage.setItem('pullshelf-collapsed', ${JSON.stringify(JSON.stringify(collapsed))}); location.reload()`)
     await wait(900)
   }
   const widths = async () => JSON.parse(await run(`JSON.stringify([...document.querySelectorAll('.columns > .pane')].map(e => Math.round(e.getBoundingClientRect().width)))`))
@@ -148,12 +148,12 @@ async function main() {
     const handle = JSON.parse(await run(`JSON.stringify((() => { const b = document.querySelector('.handle').getBoundingClientRect(); return [Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2)] })())`))
     send('mouseDown', handle[0], handle[1]); send('mouseUp', handle[0], handle[1]); await wait(150)
     const rows = JSON.parse(await run(`JSON.stringify([...document.querySelectorAll('.menu .menu-row > span')].map(e => e.textContent))`))
-    for (const label of ['Launch at login', 'Hide menu bar icon', 'Scroll gesture', 'Hide shelf', 'Quit Perch']) assert.ok(rows.includes(label), `missing "${label}" in ${rows}`)
+    for (const label of ['Launch at login', 'Hide menu bar icon', 'Scroll gesture', 'Hide shelf', 'Quit Pullshelf']) assert.ok(rows.includes(label), `missing "${label}" in ${rows}`)
     for (const label of ['Folder', 'Restart tool']) assert.ok(!rows.includes(label), `"${label}" should be gone`)
-    const quit = JSON.parse(await run(`JSON.stringify((() => { const b = [...document.querySelectorAll('.menu .menu-row')].find(e => e.textContent.includes('Quit Perch')).getBoundingClientRect(); return [Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2)] })())`))
+    const quit = JSON.parse(await run(`JSON.stringify((() => { const b = [...document.querySelectorAll('.menu .menu-row')].find(e => e.textContent.includes('Quit Pullshelf')).getBoundingClientRect(); return [Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2)] })())`))
     send('mouseDown', quit[0], quit[1]); send('mouseUp', quit[0], quit[1]); await wait(150)
     const names = JSON.parse(await run('JSON.stringify(window.__calls.map(c => c[0]))'))
-    assert.ok(names.includes('quit'), 'clicking Quit Perch should call the bridge')
+    assert.ok(names.includes('quit'), 'clicking Quit Pullshelf should call the bridge')
   })
 }
 

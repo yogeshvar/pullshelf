@@ -77,7 +77,7 @@ export function Shelf() {
 
   useEffect(() => {
     let cancelled = false
-    void window.perch.getState().then((next) => {
+    void window.pullshelf.getState().then((next) => {
       if (cancelled) return
       setState(next)
       const loaded = weightsFrom(next.settings)
@@ -85,22 +85,22 @@ export function Shelf() {
       setWeights(loaded)
       setCustomDraft(next.settings.customCommand)
     })
-    const offClips = window.perch.onClips((clips: Clip[]) => {
+    const offClips = window.pullshelf.onClips((clips: Clip[]) => {
       setState((current) => ({ ...current, clips }))
     })
-    const offNotes = window.perch.onNotes((notes: Note[]) => {
+    const offNotes = window.pullshelf.onNotes((notes: Note[]) => {
       setState((current) => ({ ...current, notes }))
     })
-    const offFiles = window.perch.onFiles((files: ShelfFile[]) => {
+    const offFiles = window.pullshelf.onFiles((files: ShelfFile[]) => {
       setState((current) => ({ ...current, files }))
     })
-    const offTool = window.perch.onToolStatus((tool: ToolStatus) => {
+    const offTool = window.pullshelf.onToolStatus((tool: ToolStatus) => {
       setState((current) => ({ ...current, tool }))
     })
-    const offTrust = window.perch.onGestureTrust((gestureTrusted: boolean) => {
+    const offTrust = window.pullshelf.onGestureTrust((gestureTrusted: boolean) => {
       setState((current) => ({ ...current, gestureTrusted }))
     })
-    const offPrefs = window.perch.onPrefs((prefs: Prefs) => {
+    const offPrefs = window.pullshelf.onPrefs((prefs: Prefs) => {
       setState((current) => ({
         ...current,
         settings: { ...current.settings, showTrayIcon: prefs.showTrayIcon },
@@ -147,13 +147,13 @@ export function Shelf() {
       ...patch
     }
     setState((current) => ({ ...current, settings: next }))
-    await window.perch.configureTool(patch)
+    await window.pullshelf.configureTool(patch)
   }
 
   function startResize(event: ReactPointerEvent<HTMLDivElement>) {
     const target = event.currentTarget
     target.setPointerCapture(event.pointerId)
-    window.perch.keepOpen()
+    window.pullshelf.keepOpen()
     const startY = event.screenY
     const startHeight = window.innerHeight
     let frame = 0
@@ -163,7 +163,7 @@ export function Shelf() {
       if (frame) return
       frame = requestAnimationFrame(() => {
         frame = 0
-        window.perch.resizeShelf(latest)
+        window.pullshelf.resizeShelf(latest)
       })
     }
     const up = () => {
@@ -171,8 +171,8 @@ export function Shelf() {
       target.removeEventListener('pointerup', up)
       target.removeEventListener('pointercancel', up)
       if (frame) cancelAnimationFrame(frame)
-      window.perch.resizeShelf(latest)
-      window.perch.resizeShelfEnd()
+      window.pullshelf.resizeShelf(latest)
+      window.pullshelf.resizeShelfEnd()
     }
     target.addEventListener('pointermove', move)
     target.addEventListener('pointerup', up)
@@ -225,7 +225,7 @@ export function Shelf() {
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
       const [tool, clips, files] = weightsRef.current
-      void window.perch.saveLayout(tool, clips, files)
+      void window.pullshelf.saveLayout(tool, clips, files)
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
@@ -255,7 +255,7 @@ export function Shelf() {
       {!state.gestureTrusted ? (
         <div className="banner">
           <span>Allow Accessibility to enable the pull gesture from the top of the screen.</span>
-          <button type="button" onClick={() => window.perch.promptGesture()}>
+          <button type="button" onClick={() => window.pullshelf.promptGesture()}>
             Allow
           </button>
         </div>
@@ -313,26 +313,26 @@ export function Shelf() {
                 className="menu-row"
                 role="menuitemcheckbox"
                 aria-checked={state.launchAtLogin}
-                onClick={() => window.perch.setLaunchAtLogin(!state.launchAtLogin)}
+                onClick={() => window.pullshelf.setLaunchAtLogin(!state.launchAtLogin)}
               >
                 <span>Launch at login</span>
                 <em>{state.launchAtLogin ? '✓' : ''}</em>
               </button>
             ) : null}
-            <button type="button" className="menu-row" onClick={() => window.perch.setTrayVisible(!state.settings.showTrayIcon)}>
+            <button type="button" className="menu-row" onClick={() => window.pullshelf.setTrayVisible(!state.settings.showTrayIcon)}>
               <span>{state.settings.showTrayIcon ? 'Hide menu bar icon' : 'Show menu bar icon'}</span>
             </button>
-            <button type="button" className="menu-row" disabled={state.gestureTrusted} onClick={() => window.perch.promptGesture()}>
+            <button type="button" className="menu-row" disabled={state.gestureTrusted} onClick={() => window.pullshelf.promptGesture()}>
               <span>Scroll gesture</span>
               <em>{state.gestureTrusted ? 'On' : 'Enable…'}</em>
             </button>
             <div className="menu-sep" role="separator" />
-            <button type="button" className="menu-row" onClick={() => window.perch.hide()}>
+            <button type="button" className="menu-row" onClick={() => window.pullshelf.hide()}>
               <span>Hide shelf</span>
               <em>{state.shortcut}</em>
             </button>
-            <button type="button" className="menu-row" onClick={() => window.perch.quit()}>
-              <span>Quit Perch</span>
+            <button type="button" className="menu-row" onClick={() => window.pullshelf.quit()}>
+              <span>Quit Pullshelf</span>
             </button>
           </div>
         ) : null}
@@ -375,9 +375,10 @@ function weightsFrom(settings: AppState['settings']): number[] {
 }
 
 type Collapsed = { tool: boolean; clips: boolean; files: boolean; notes: boolean }
-const COLLAPSE_KEY = 'perch-collapsed'
+const COLLAPSE_KEY = 'pullshelf-collapsed'
 
 function loadCollapsed(): Collapsed {
+  adoptLegacyKey('perch-collapsed', COLLAPSE_KEY)
   adoptLegacyKey('ledge-collapsed', COLLAPSE_KEY)
   const open = { tool: false, clips: false, files: false, notes: false }
   try {

@@ -2,10 +2,11 @@ import { adoptLegacyKey } from './legacy'
 
 export type Theme = 'dark' | 'light'
 
-const KEY = 'perch-theme'
+const KEY = 'pullshelf-theme'
 const listeners = new Set<(theme: Theme) => void>()
 
 export function currentTheme(): Theme {
+  adoptLegacyKey('perch-theme', KEY)
   adoptLegacyKey('ledge-theme', KEY)
   try {
     const saved = localStorage.getItem(KEY)

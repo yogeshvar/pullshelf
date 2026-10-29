@@ -6,12 +6,12 @@ import type { ToolStatus } from '../../src/shared/types'
 import { FitAddon } from '../mocks/addon-fit'
 import { Terminal } from '../mocks/xterm'
 import { FakeResizeObserver, setSystemPrefersLight } from '../helpers/setup-dom'
-import { installPerch, makeState } from '../helpers/perch'
+import { installPullshelf, makeState } from '../helpers/pullshelf'
 
 const running: ToolStatus = { running: true, presetId: 'claude', label: 'Claude Code', cwd: '/x', error: null, exitCode: null }
 
 const setup = (status: ToolStatus = running, collapsed = false, overrides: Record<string, unknown> = {}) => {
-  const bridge = installPerch(makeState(), overrides)
+  const bridge = installPullshelf(makeState(), overrides)
   const onToggle = vi.fn()
   const view = render(<ToolPane status={status} collapsed={collapsed} onToggle={onToggle} />)
   const term = Terminal.instances[0]
@@ -23,11 +23,11 @@ const settled = () => act(async () => undefined)
 
 describe('terminal setup', () => {
   it('opens a terminal fitted to its host and tells the shell its size', () => {
-    const { term, fit, perch } = setup()
+    const { term, fit, pullshelf } = setup()
     expect(term.loadAddon).toHaveBeenCalledWith(fit)
     expect(term.open).toHaveBeenCalledWith(document.querySelector('.term-host'))
     expect(fit.fit).toHaveBeenCalled()
-    expect(perch.resizePty).toHaveBeenCalledWith(80, 24)
+    expect(pullshelf.resizePty).toHaveBeenCalledWith(80, 24)
     expect(term.options).toMatchObject({ fontSize: 13, cursorBlink: true, scrollback: 4000 })
   })
 
@@ -40,9 +40,9 @@ describe('terminal setup', () => {
   })
 
   it('sends typing to the shell', () => {
-    const { term, perch } = setup()
+    const { term, pullshelf } = setup()
     term.dataHandler?.('ls\r')
-    expect(perch.writePty).toHaveBeenCalledWith('ls\r')
+    expect(pullshelf.writePty).toHaveBeenCalledWith('ls\r')
   })
 
   it('swaps colours in place when the theme changes, without recreating the terminal', () => {
@@ -113,25 +113,25 @@ describe('sizing and focus', () => {
   }
 
   it('refits and resizes the shell when the pane is resized', () => {
-    const { fit, perch } = setup()
+    const { fit, pullshelf } = setup()
     fit.fit.mockClear()
-    perch.resizePty.mockClear()
+    pullshelf.resizePty.mockClear()
     sizeHost(600, 400)
     act(() => FakeResizeObserver.instances[0].trigger())
     expect(fit.fit).toHaveBeenCalledTimes(1)
-    expect(perch.resizePty).toHaveBeenCalledWith(80, 24)
+    expect(pullshelf.resizePty).toHaveBeenCalledWith(80, 24)
   })
 
   it('does not shrink the shell when the pane is collapsed to nothing', () => {
-    const { fit, perch } = setup()
+    const { fit, pullshelf } = setup()
     fit.fit.mockClear()
-    perch.resizePty.mockClear()
+    pullshelf.resizePty.mockClear()
     sizeHost(0, 400) // too narrow
     act(() => FakeResizeObserver.instances[0].trigger())
     sizeHost(600, 10) // too short
     act(() => FakeResizeObserver.instances[0].trigger())
     expect(fit.fit).not.toHaveBeenCalled()
-    expect(perch.resizePty).not.toHaveBeenCalled()
+    expect(pullshelf.resizePty).not.toHaveBeenCalled()
   })
 
   it('refits and takes focus each time the shelf is shown', () => {
@@ -167,11 +167,11 @@ describe('header and exit bar', () => {
   })
 
   it('explains why nothing is running, and offers to start it', () => {
-    const { perch, rerender, onToggle } = setup({ ...running, running: false, exitCode: null, error: null })
+    const { pullshelf, rerender, onToggle } = setup({ ...running, running: false, exitCode: null, error: null })
     expect(screen.getByText('Waiting to start')).toBeInTheDocument()
     expect(document.querySelector('.dot')).not.toHaveClass('on')
     fireEvent.click(screen.getByRole('button', { name: 'Start' }))
-    expect(perch.restartTool).toHaveBeenCalled()
+    expect(pullshelf.restartTool).toHaveBeenCalled()
     rerender(<ToolPane status={{ ...running, running: false, exitCode: 2 }} collapsed={false} onToggle={onToggle} />)
     expect(screen.getByText('Exited (2)')).toBeInTheDocument()
     rerender(<ToolPane status={{ ...running, running: false, error: "Couldn't find claude." }} collapsed={false} onToggle={onToggle} />)

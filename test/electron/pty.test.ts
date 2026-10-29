@@ -33,13 +33,13 @@ const settings = (patch: Partial<Settings> = {}): Settings => ({
   ...patch
 })
 
-const PATH_MARK = (value: string) => `noise\n__PERCH_PATH__${value}__PERCH_PATH__\n`
-const BIN_MARK = (value: string) => `noise\n__PERCH_BIN__${value}__PERCH_BIN__\n`
+const PATH_MARK = (value: string) => `noise\n__PULLSHELF_PATH__${value}__PULLSHELF_PATH__\n`
+const BIN_MARK = (value: string) => `noise\n__PULLSHELF_BIN__${value}__PULLSHELF_BIN__\n`
 
 /** Default login-shell behaviour: report a PATH, and find `claude` / `codex`. */
 const happyShell: ExecResponder = (_file, args) => {
   const script = args[1]
-  if (script.includes('__PERCH_PATH__')) return PATH_MARK('/opt/bin:/usr/bin')
+  if (script.includes('__PULLSHELF_PATH__')) return PATH_MARK('/opt/bin:/usr/bin')
   return BIN_MARK(`/opt/bin/${script.match(/command -v (\w+)/)?.[1]}`)
 }
 
@@ -66,14 +66,14 @@ afterEach(() => {
 })
 
 describe('starting a tool', () => {
-  it('starts a login shell in the chosen folder with a Perch terminal environment', async () => {
+  it('starts a login shell in the chosen folder with a Pullshelf terminal environment', async () => {
     const p = await load()
     await p.start(settings({ presetId: 'shell' }))
     expect(p.spawn).toHaveBeenCalledTimes(1)
     const pty = p.last()
     expect([pty.command, pty.args]).toEqual(['/bin/zsh', ['-l']])
     expect(pty.options).toMatchObject({ name: 'xterm-256color', cwd: '/work', cols: 100, rows: 28 })
-    expect(pty.options.env).toMatchObject({ TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'Perch', PERCH: '1', PATH: '/opt/bin:/usr/bin' })
+    expect(pty.options.env).toMatchObject({ TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'Pullshelf', PULLSHELF: '1', PATH: '/opt/bin:/usr/bin' })
   })
 
   it('announces a reset, then "starting", then "running"', async () => {
@@ -95,7 +95,7 @@ describe('starting a tool', () => {
 
   it('says so when claude or codex cannot be found', async () => {
     const p = await load()
-    hoisted.responder = (_f, args) => (args[1].includes('__PERCH_PATH__') ? PATH_MARK('/usr/bin') : BIN_MARK(''))
+    hoisted.responder = (_f, args) => (args[1].includes('__PULLSHELF_PATH__') ? PATH_MARK('/usr/bin') : BIN_MARK(''))
     await p.start(settings({ presetId: 'claude' }))
     expect(p.toolStatus()).toMatchObject({ running: false, error: "Couldn't find claude. Install it, then start the tool again." })
     expect(p.spawn).not.toHaveBeenCalled()
@@ -105,16 +105,16 @@ describe('starting a tool', () => {
 
   it('treats a relative path or a failing shell lookup as "not found"', async () => {
     const p = await load()
-    hoisted.responder = (_f, args) => (args[1].includes('__PERCH_PATH__') ? PATH_MARK('/usr/bin') : BIN_MARK('claude not found'))
+    hoisted.responder = (_f, args) => (args[1].includes('__PULLSHELF_PATH__') ? PATH_MARK('/usr/bin') : BIN_MARK('claude not found'))
     await p.start(settings({ presetId: 'claude' }))
     expect(p.toolStatus().error).toMatch(/Couldn't find claude/)
     hoisted.responder = (_f, args) => {
-      if (args[1].includes('__PERCH_PATH__')) return PATH_MARK('/usr/bin')
+      if (args[1].includes('__PULLSHELF_PATH__')) return PATH_MARK('/usr/bin')
       throw new Error('shell exploded')
     }
     await p.start(settings({ presetId: 'claude' }))
     expect(p.toolStatus().error).toMatch(/Couldn't find claude/)
-    hoisted.responder = (_f, args) => (args[1].includes('__PERCH_PATH__') ? PATH_MARK('/usr/bin') : 'no markers at all')
+    hoisted.responder = (_f, args) => (args[1].includes('__PULLSHELF_PATH__') ? PATH_MARK('/usr/bin') : 'no markers at all')
     await p.start(settings({ presetId: 'claude' }))
     expect(p.toolStatus().error).toMatch(/Couldn't find claude/)
   })

@@ -11,3 +11,4 @@ release
 *.zip
 .env
 .env.*
+.vercel

@@ -8,7 +8,7 @@ export function App() {
       if (event.key !== 'Escape' || event.defaultPrevented) return
       const target = event.target
       if (target instanceof HTMLElement && target.classList.contains('xterm-helper-textarea')) return
-      window.perch.hide()
+      window.pullshelf.hide()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

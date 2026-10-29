@@ -28,8 +28,8 @@ export const makeFile = (patch: Partial<ShelfFile> = {}): ShelfFile => ({
 
 type Listener = (payload: never) => void
 
-/** Install a fake `window.perch` (the preload bridge) and return handles to drive it. */
-export function installPerch(state: AppState = makeState(), overrides: Record<string, unknown> = {}) {
+/** Install a fake `window.pullshelf` (the preload bridge) and return handles to drive it. */
+export function installPullshelf(state: AppState = makeState(), overrides: Record<string, unknown> = {}) {
   const listeners = new Map<string, Set<Listener>>()
   const subscribe = (name: string) =>
     vi.fn((callback: Listener) => {
@@ -41,7 +41,7 @@ export function installPerch(state: AppState = makeState(), overrides: Record<st
     })
   const ok = () => vi.fn(async (..._args: unknown[]): Promise<ActionResult> => ({ ok: true }))
 
-  const perch = {
+  const pullshelf = {
     hide: vi.fn(),
     getState: vi.fn(async () => state),
     saveLayout: vi.fn(async (..._args: number[]) => undefined),
@@ -87,9 +87,9 @@ export function installPerch(state: AppState = makeState(), overrides: Record<st
     onPrefs: subscribe('prefs'),
     ...overrides
   }
-  ;(window as unknown as { perch: unknown }).perch = perch
+  ;(window as unknown as { pullshelf: unknown }).pullshelf = pullshelf
   return {
-    perch,
+    pullshelf,
     /** Deliver an event from the main process, e.g. emit('clips', [...]). */
     emit: (name: string, payload?: unknown) => {
       for (const listener of [...(listeners.get(name) ?? [])]) listener(payload as never)

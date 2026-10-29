@@ -1,4 +1,4 @@
-// Renders the Perch icon (same geometry as build/icon.svg) into build/icon.iconset/*.png.
+// Renders the Pullshelf icon (same geometry as build/icon.svg) into build/icon.iconset/*.png.
 // Run: swiftc -O build/make-icon.swift -o /tmp/make-icon && /tmp/make-icon build/icon.iconset && iconutil -c icns build/icon.iconset -o build/icon.icns
 import AppKit
 

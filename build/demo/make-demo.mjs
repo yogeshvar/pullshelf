@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const bin = (name) => resolve(root, 'node_modules/.bin', name)
-const work = join(tmpdir(), 'perch-demo')
+const work = join(tmpdir(), 'pullshelf-demo')
 const frames = join(work, 'frames')
 const assets = resolve(root, 'docs/assets')
 
@@ -41,15 +41,15 @@ if (!existsSync(join(frames, '0001.png'))) {
 
 const input = ['-y', '-loglevel', 'error', '-framerate', '30', '-i', join(frames, '%04d.png')]
 console.log('Encoding…')
-run('ffmpeg', [...input, '-vf', 'scale=1280:-2,format=yuv420p', '-c:v', 'libx264', '-crf', '27', '-preset', 'slow', '-movflags', '+faststart', '-an', join(assets, 'perch-demo.mp4')], 'mp4')
-run('ffmpeg', [...input, '-vf', 'scale=1280:-2,format=yuv420p', '-c:v', 'libvpx-vp9', '-crf', '36', '-b:v', '0', '-row-mt', '1', '-an', join(assets, 'perch-demo.webm')], 'webm')
-run('ffmpeg', [...input, '-vf', 'fps=15,scale=720:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4', '-loop', '0', join(assets, 'perch-demo.gif')], 'gif')
+run('ffmpeg', [...input, '-vf', 'scale=1280:-2,format=yuv420p', '-c:v', 'libx264', '-crf', '27', '-preset', 'slow', '-movflags', '+faststart', '-an', join(assets, 'pullshelf-demo.mp4')], 'mp4')
+run('ffmpeg', [...input, '-vf', 'scale=1280:-2,format=yuv420p', '-c:v', 'libvpx-vp9', '-crf', '36', '-b:v', '0', '-row-mt', '1', '-an', join(assets, 'pullshelf-demo.webm')], 'webm')
+run('ffmpeg', [...input, '-vf', 'fps=15,scale=720:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4', '-loop', '0', join(assets, 'pullshelf-demo.gif')], 'gif')
 // Poster: a frame near the middle of the story, when every pane has content.
-const duration = Number(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', join(assets, 'perch-demo.mp4')], { encoding: 'utf8' }).stdout)
+const duration = Number(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', join(assets, 'pullshelf-demo.mp4')], { encoding: 'utf8' }).stdout)
 const poster = Number(process.env.DEMO_POSTER_AT ?? (duration * 0.45).toFixed(2))
-run('ffmpeg', ['-y', '-loglevel', 'error', '-ss', String(poster), '-framerate', '30', '-i', join(frames, '%04d.png'), '-frames:v', '1', '-vf', 'scale=1280:-2', join(assets, 'perch-demo-poster.png')], 'poster')
+run('ffmpeg', ['-y', '-loglevel', 'error', '-ss', String(poster), '-framerate', '30', '-i', join(frames, '%04d.png'), '-frames:v', '1', '-vf', 'scale=1280:-2', join(assets, 'pullshelf-demo-poster.png')], 'poster')
 
-for (const name of ['perch-demo.mp4', 'perch-demo.webm', 'perch-demo.gif', 'perch-demo-poster.png']) {
+for (const name of ['pullshelf-demo.mp4', 'pullshelf-demo.webm', 'pullshelf-demo.gif', 'pullshelf-demo-poster.png']) {
   console.log(`${name.padEnd(24)} ${(statSync(join(assets, name)).size / 1024).toFixed(0)} KB`)
 }
 rmSync(work, { recursive: true, force: true })

@@ -18,7 +18,7 @@ export type BootOptions = {
 export async function bootMain(options: BootOptions = {}) {
   vi.resetModules()
   const electron = await import('../mocks/electron')
-  electron.electronState.userData = tempDir('perch-main-')
+  electron.electronState.userData = tempDir('pullshelf-main-')
   if (options.singleInstanceLock !== undefined) electron.electronState.singleInstanceLock = options.singleInstanceLock
   if (options.ready) electron.electronState.ready = options.ready
   options.beforeImport?.(electron)
@@ -62,7 +62,7 @@ export async function bootMain(options: BootOptions = {}) {
     listener: () => vi.mocked(gesture).startGesture.mock.calls[0][0],
     /** Saved settings as persisted in the real database. */
     savedSettings: () => {
-      const db = new Database(`${electron.electronState.userData}/perch.db`)
+      const db = new Database(`${electron.electronState.userData}/pullshelf.db`)
       const result = readSettings(db as never, '/fallback')
       db.close()
       return result

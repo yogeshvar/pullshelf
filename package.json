@@ -1,7 +1,7 @@
 {
-  "name": "perch",
-  "productName": "Perch",
-  "version": "0.1.0",
+  "name": "pullshelf",
+  "productName": "Pullshelf",
+  "version": "0.1.1",
   "private": true,
   "description": "A pull-down shelf for the tools you already run.",
   "license": "MIT",
@@ -56,8 +56,8 @@
     "better-sqlite3@13.0.3": true
   },
   "build": {
-    "appId": "io.github.yogeshvar.perch",
-    "productName": "Perch",
+    "appId": "io.github.yogeshvar.pullshelf",
+    "productName": "Pullshelf",
     "artifactName": "${productName}-${version}-arm64.${ext}",
     "directories": {
       "output": "release",
@@ -102,7 +102,7 @@
       "identity": null,
       "extendInfo": {
         "LSUIElement": true,
-        "NSHumanReadableCopyright": "Copyright \u00a9 2026 Perch contributors. MIT License."
+        "NSHumanReadableCopyright": "Copyright \u00a9 2026 Pullshelf contributors. MIT License."
       }
     }
   }

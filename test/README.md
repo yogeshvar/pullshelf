@@ -6,7 +6,7 @@
 
 | Folder | What it tests | Runs in |
 | --- | --- | --- |
-| `test/electron` | the main process: database, the Ledge-to-Perch data migration, notes, files, clipboard, gesture parser, PTY, preload bridge, and `main.ts` (window, tray and its menu-bar settings, IPC, gestures) | Node |
+| `test/electron` | the main process: database, the Ledge-to-Pullshelf data migration, notes, files, clipboard, gesture parser, PTY, preload bridge, and `main.ts` (window, tray and its menu-bar settings, IPC, gestures) | Node |
 | `test/scripts` | `scripts/postinstall.mjs` | Node |
 | `test/src` | the React UI: each pane, the shelf layout and dividers, the settings menu, theme, entry point | jsdom |
 | `test/mocks`, `test/shims`, `test/helpers` | shared fakes and setup | |

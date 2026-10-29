@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NotesPane } from '../../src/shelf/NotesPane'
 import type { Note } from '../../src/shared/types'
-import { installPerch, makeNote } from '../helpers/perch'
+import { installPullshelf, makeNote } from '../helpers/pullshelf'
 
 const NOW = new Date('2026-01-01T12:00:00Z').getTime()
 
@@ -12,7 +12,7 @@ const gamma = makeNote({ id: 'g', title: 'Gamma', body: 'gamma text', updatedAt:
 const delta = makeNote({ id: 'd', title: 'Delta', body: 'delta', updatedAt: NOW - 3 * 86_400_000 })
 
 function setup(notes: Note[] = [alpha, beta], overrides: Record<string, unknown> = {}) {
-  const bridge = installPerch(undefined, overrides)
+  const bridge = installPullshelf(undefined, overrides)
   const onToast = vi.fn()
   const onToggle = vi.fn()
   const view = render(<NotesPane notes={notes} onToast={onToast} collapsed={false} onToggle={onToggle} />)
@@ -33,57 +33,57 @@ afterEach(() => vi.useRealTimers())
 
 describe('the editor', () => {
   it('shows the first note and saves edits 350 ms after you stop typing', async () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     expect(editor().value).toBe('alpha body')
     fireEvent.change(editor(), { target: { value: 'alpha body!' } })
     await advance(349)
-    expect(perch.updateNote).not.toHaveBeenCalled()
+    expect(pullshelf.updateNote).not.toHaveBeenCalled()
     await advance(2)
-    expect(perch.updateNote).toHaveBeenCalledWith('a', 'alpha body!')
+    expect(pullshelf.updateNote).toHaveBeenCalledWith('a', 'alpha body!')
   })
 
   it('only saves the last keystroke of a burst', async () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     fireEvent.change(editor(), { target: { value: 'one' } })
     await advance(200)
     fireEvent.change(editor(), { target: { value: 'one two' } })
     await advance(400)
-    expect(perch.updateNote.mock.calls).toEqual([['a', 'one two']])
+    expect(pullshelf.updateNote.mock.calls).toEqual([['a', 'one two']])
   })
 
   it('does not save when the text is unchanged', async () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     fireEvent.change(editor(), { target: { value: 'alpha body' } })
     await advance(1000)
-    expect(perch.updateNote).not.toHaveBeenCalled()
+    expect(pullshelf.updateNote).not.toHaveBeenCalled()
   })
 
   it('saves pending text immediately when you switch to another note, to the right note', async () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     fireEvent.change(editor(), { target: { value: 'unsaved alpha' } })
     click('Notes list')
     fireEvent.click(screen.getByText('Beta'))
     await advance(300)
     expect(editor().value).toBe('beta body')
-    expect(perch.updateNote.mock.calls).toEqual([['a', 'unsaved alpha']])
+    expect(pullshelf.updateNote.mock.calls).toEqual([['a', 'unsaved alpha']])
     await advance(1000)
-    expect(perch.updateNote.mock.calls).toEqual([['a', 'unsaved alpha']]) // nothing written to Beta
+    expect(pullshelf.updateNote.mock.calls).toEqual([['a', 'unsaved alpha']]) // nothing written to Beta
   })
 
   it('does not re-save text that was already saved when you switch', async () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     click('Notes list')
     fireEvent.click(screen.getByText('Beta'))
     await advance(300)
-    expect(perch.updateNote).not.toHaveBeenCalled()
+    expect(pullshelf.updateNote).not.toHaveBeenCalled()
   })
 
   it('invites you to create a note when there are none', async () => {
-    const { perch } = setup([])
+    const { pullshelf } = setup([])
     expect(screen.queryByPlaceholderText('Start typing')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'New note', hidden: false, description: '' }).closest('button') as HTMLElement)
     await flushPromises()
-    expect(perch.createNote).toHaveBeenCalled()
+    expect(pullshelf.createNote).toHaveBeenCalled()
   })
 
   it('follows the selected note when the notes list is replaced', () => {
@@ -97,11 +97,11 @@ describe('the editor', () => {
 
 describe('creating notes', () => {
   it('+ creates a note, closes menus and focuses the editor', async () => {
-    const { perch, rerender } = setup()
+    const { pullshelf, rerender } = setup()
     click('Notes list')
     click('New note')
     await flushPromises()
-    expect(perch.createNote).toHaveBeenCalled()
+    expect(pullshelf.createNote).toHaveBeenCalled()
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
     const fresh = makeNote({ id: 'new', title: 'New note', body: '' })
     rerender([fresh, alpha, beta])
@@ -232,13 +232,13 @@ describe('renaming', () => {
   }
 
   it('double-clicking a title edits it in place, and Enter saves the new name', async () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     const input = startRename()
     expect(input.value).toBe('Beta')
     fireEvent.change(input, { target: { value: '  Beta two  ' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     fireEvent.blur(input)
-    expect(perch.renameNote).toHaveBeenCalledWith('b', 'Beta two')
+    expect(pullshelf.renameNote).toHaveBeenCalledWith('b', 'Beta two')
     expect(screen.queryByPlaceholderText('Untitled')).not.toBeInTheDocument()
   })
 
@@ -250,45 +250,45 @@ describe('renaming', () => {
   })
 
   it('does not save when the name is unchanged', () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     const input = startRename()
     fireEvent.blur(input)
-    expect(perch.renameNote).not.toHaveBeenCalled()
+    expect(pullshelf.renameNote).not.toHaveBeenCalled()
   })
 
   it('an emptied name is sent so the title goes back to following the note', () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     const input = startRename()
     fireEvent.change(input, { target: { value: '   ' } })
     fireEvent.blur(input)
-    expect(perch.renameNote).toHaveBeenCalledWith('b', '')
+    expect(pullshelf.renameNote).toHaveBeenCalledWith('b', '')
   })
 
   it('Escape cancels without saving', () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     const input = startRename()
     fireEvent.change(input, { target: { value: 'Something else' } })
     fireEvent.keyDown(input, { key: 'Escape' })
     expect(screen.queryByPlaceholderText('Untitled')).not.toBeInTheDocument()
-    expect(perch.renameNote).not.toHaveBeenCalled()
+    expect(pullshelf.renameNote).not.toHaveBeenCalled()
     expect(screen.getByRole('listbox')).toBeInTheDocument() // Escape was consumed by the field
   })
 
   it('other keys while renaming do nothing special', () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     const input = startRename()
     fireEvent.keyDown(input, { key: 'a' })
     expect(screen.getByPlaceholderText('Untitled')).toBeInTheDocument()
-    expect(perch.renameNote).not.toHaveBeenCalled()
+    expect(pullshelf.renameNote).not.toHaveBeenCalled()
   })
 
   it('a rename of a note that has since been deleted is ignored', () => {
-    const { perch, rerender } = setup()
+    const { pullshelf, rerender } = setup()
     const input = startRename()
     fireEvent.change(input, { target: { value: 'Ghost' } })
     rerender([alpha])
     fireEvent.blur(input)
-    expect(perch.renameNote).not.toHaveBeenCalled()
+    expect(pullshelf.renameNote).not.toHaveBeenCalled()
   })
 
   it('starting a rename cancels a pending pick from the first click of the double-click', async () => {
@@ -311,32 +311,32 @@ describe('renaming', () => {
 
 describe('deleting', () => {
   it('asks twice before deleting, and selects what is left if the open note was deleted', async () => {
-    const { perch, rerender } = setup([alpha, beta], { deleteNote: vi.fn(async () => [beta]) })
+    const { pullshelf, rerender } = setup([alpha, beta], { deleteNote: vi.fn(async () => [beta]) })
     click('Notes list')
     fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0])
-    expect(perch.deleteNote).not.toHaveBeenCalled()
+    expect(pullshelf.deleteNote).not.toHaveBeenCalled()
     expect(screen.getByText('Sure?')).toBeInTheDocument()
     await act(async () => {
       fireEvent.click(screen.getByText('Sure?'))
     })
-    expect(perch.deleteNote).toHaveBeenCalledWith('a')
+    expect(pullshelf.deleteNote).toHaveBeenCalledWith('a')
     rerender([beta])
     expect(editor().value).toBe('beta body')
   })
 
   it('deleting another note keeps the open one, and the last note leaves an empty pane', async () => {
-    const { perch, rerender } = setup([alpha, beta], { deleteNote: vi.fn(async () => [alpha]) })
+    const { pullshelf, rerender } = setup([alpha, beta], { deleteNote: vi.fn(async () => [alpha]) })
     click('Notes list')
     const deletes = () => screen.getAllByRole('button', { name: 'Delete' })
     fireEvent.click(deletes()[1])
     await act(async () => {
       fireEvent.click(screen.getByText('Sure?'))
     })
-    expect(perch.deleteNote).toHaveBeenCalledWith('b')
+    expect(pullshelf.deleteNote).toHaveBeenCalledWith('b')
     rerender([alpha])
     expect(editor().value).toBe('alpha body')
 
-    perch.deleteNote.mockResolvedValueOnce([])
+    pullshelf.deleteNote.mockResolvedValueOnce([])
     fireEvent.click(deletes()[0])
     await act(async () => {
       fireEvent.click(screen.getByText('Sure?'))
@@ -364,14 +364,14 @@ describe('deleting the note you picked', () => {
   }
 
   it('moves to the first remaining note', async () => {
-    const { perch, rerender } = setup([alpha, beta], { deleteNote: vi.fn(async () => [alpha]) })
+    const { pullshelf, rerender } = setup([alpha, beta], { deleteNote: vi.fn(async () => [alpha]) })
     await pickBeta()
     click('Notes list')
     fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[1])
     await act(async () => {
       fireEvent.click(screen.getByText('Sure?'))
     })
-    expect(perch.deleteNote).toHaveBeenCalledWith('b')
+    expect(pullshelf.deleteNote).toHaveBeenCalledWith('b')
     rerender([alpha])
     expect(editor().value).toBe('alpha body')
   })
@@ -391,18 +391,18 @@ describe('deleting the note you picked', () => {
 
 describe('actions', () => {
   it('sends the note to the tool and reports the outcome', async () => {
-    const { perch, onToast } = setup()
+    const { pullshelf, onToast } = setup()
     await act(async () => {
       click('Send')
     })
-    expect(perch.sendToTool).toHaveBeenCalledWith('alpha body')
+    expect(pullshelf.sendToTool).toHaveBeenCalledWith('alpha body')
     expect(onToast).toHaveBeenLastCalledWith('Sent to the tool')
-    perch.sendToTool.mockResolvedValueOnce({ ok: false, error: 'Not running' })
+    pullshelf.sendToTool.mockResolvedValueOnce({ ok: false, error: 'Not running' })
     await act(async () => {
       click('Send')
     })
     expect(onToast).toHaveBeenLastCalledWith('Not running')
-    perch.sendToTool.mockResolvedValueOnce({ ok: false })
+    pullshelf.sendToTool.mockResolvedValueOnce({ ok: false })
     await act(async () => {
       click('Send')
     })
@@ -410,29 +410,29 @@ describe('actions', () => {
   })
 
   it('does not send an empty note', async () => {
-    const { perch } = setup([makeNote({ id: 'e', body: '   ' })])
+    const { pullshelf } = setup([makeNote({ id: 'e', body: '   ' })])
     await act(async () => {
       click('Send')
     })
-    expect(perch.sendToTool).not.toHaveBeenCalled()
+    expect(pullshelf.sendToTool).not.toHaveBeenCalled()
   })
 
   it('opens the note in Claude chat or Claude Code, reporting only failures', async () => {
-    const { perch, onToast } = setup()
+    const { pullshelf, onToast } = setup()
     await act(async () => {
       click('Claude')
     })
     await act(async () => {
       click('Code')
     })
-    expect(perch.openInClaude.mock.calls).toEqual([['alpha body', 'chat'], ['alpha body', 'code']])
+    expect(pullshelf.openInClaude.mock.calls).toEqual([['alpha body', 'chat'], ['alpha body', 'code']])
     expect(onToast).not.toHaveBeenCalled()
-    perch.openInClaude.mockResolvedValueOnce({ ok: false, error: 'No handler' })
+    pullshelf.openInClaude.mockResolvedValueOnce({ ok: false, error: 'No handler' })
     await act(async () => {
       click('Claude')
     })
     expect(onToast).toHaveBeenLastCalledWith('No handler')
-    perch.openInClaude.mockResolvedValueOnce({ ok: false })
+    pullshelf.openInClaude.mockResolvedValueOnce({ ok: false })
     await act(async () => {
       click('Code')
     })
@@ -440,12 +440,12 @@ describe('actions', () => {
   })
 
   it('sends what is on screen, including unsaved edits', async () => {
-    const { perch } = setup()
+    const { pullshelf } = setup()
     fireEvent.change(editor(), { target: { value: 'fresh edit' } })
     await act(async () => {
       click('Send')
     })
-    expect(perch.sendToTool).toHaveBeenCalledWith('fresh edit')
+    expect(pullshelf.sendToTool).toHaveBeenCalledWith('fresh edit')
   })
 })
 

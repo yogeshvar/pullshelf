@@ -1,231 +1,153 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Perch — a pull-down shelf for the Mac</title>
-<meta name="description" content="Perch is a macOS menu-bar shelf. Pull down from the top edge for a terminal, clipboard history, a file drop shelf and quick notes. Everything stays on your Mac.">
-<meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f7f4ee" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#121110" media="(prefers-color-scheme: dark)">
-<link rel="canonical" href="https://yogeshvar.github.io/perch/">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231e1b17'/%3E%3Cpath d='M6 13h8.5a1.5 1.5 0 0 0 3 0H26v4.5H6z' fill='%23e8785f'/%3E%3C/svg%3E">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Perch — a pull-down shelf for the Mac">
-<meta property="og:description" content="A pull-down shelf for the tools you already run. Terminal, clipboard, files and notes, one gesture away.">
-<meta property="og:url" content="https://yogeshvar.github.io/perch/">
-<meta property="og:image" content="https://yogeshvar.github.io/perch/assets/perch-dark.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Perch — a pull-down shelf for the Mac">
-<meta name="twitter:description" content="A pull-down shelf for the tools you already run.">
-<meta name="twitter:image" content="https://yogeshvar.github.io/perch/assets/perch-dark.png">
-<style>
-:root{
-  --bg:#f7f4ee; --ink:#1e1b17; --muted:#5e574d; --rule:#d9d3c7; --tint:#eee9df;
-  --accent:#c8442f; --accent-text:#b53a26; --code-bg:#1e1b17; --code-ink:#f2eee6;
-}
-@media (prefers-color-scheme:dark){
-  :root{
-    --bg:#121110; --ink:#e9e5dc; --muted:#a8a296; --rule:#2e2b27; --tint:#1b1917;
-    --accent:#e8785f; --accent-text:#e8785f; --code-bg:#1b1917; --code-ink:#e9e5dc;
-  }
-}
-*,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{
-  margin:0;background:var(--bg);color:var(--ink);
-  font:1.0625rem/1.65 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
-  -webkit-font-smoothing:antialiased;
-}
-.wrap{max-width:720px;margin:0 auto;padding:0 1.25rem}
-a{color:inherit;text-decoration-color:var(--accent);text-decoration-thickness:1px;text-underline-offset:.2em}
-a:hover{color:var(--accent-text)}
-:focus-visible{outline:2px solid var(--accent-text);outline-offset:3px;border-radius:2px}
-h1,h2,h3,.wordmark{font-family:ui-serif,"New York",Charter,Georgia,serif;font-weight:600;letter-spacing:-.01em;line-height:1.15;margin:0}
-.skip{position:absolute;left:-999px;top:0;background:var(--ink);color:var(--bg);padding:.5rem .75rem;z-index:10}
-.skip:focus{left:0}
-header{padding:2.5rem 0 0}
-.wordmark{font-size:1.25rem;display:inline-flex;align-items:center;gap:.6rem}
-.wordmark i{display:inline-block;width:1.5rem;height:.4rem;background:var(--accent);border-radius:1px;position:relative;top:.1rem}
-.hero{padding:4rem 0 3rem}
-h1{font-size:clamp(2.4rem,9vw,3.75rem);letter-spacing:-.025em}
-.pitch{font-family:ui-serif,"New York",Charter,Georgia,serif;font-size:clamp(1.3rem,4.5vw,1.65rem);line-height:1.35;color:var(--muted);margin:1rem 0 2rem;max-width:30ch}
-.cmd{display:flex;align-items:stretch;background:var(--code-bg);color:var(--code-ink);border-radius:6px;max-width:100%}
-.cmd pre{margin:0;padding:.9rem 1rem;overflow-x:auto;flex:1;min-width:0}
-code,pre{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.875rem}
-.cmd code{white-space:pre}
-.copy{font:inherit;font-size:.8125rem;background:none;color:var(--code-ink);border:0;border-left:1px solid rgba(128,128,128,.35);padding:0 1rem;cursor:pointer;display:none;border-radius:0 6px 6px 0}
-.copy:hover{color:#e8785f}
-.copy:focus-visible{outline-color:#e8785f;outline-offset:-3px}
-.js .copy{display:block}
-.hero-links{margin:1.25rem 0 0;color:var(--muted);font-size:.9375rem}
-.hero-links a{color:var(--ink)}
-figure{margin:0 0 4.5rem}
-.shot{display:block;background:var(--tint);border:1px solid var(--rule);border-radius:8px;overflow:hidden;aspect-ratio:9/4}
-.shot img{display:block;width:100%;height:auto;aspect-ratio:9/4;object-fit:cover;color:var(--muted);font-size:.875rem}
-.shot video{display:block;width:100%;height:auto;aspect-ratio:2/1;background:var(--tint)}
-.stills{margin:3rem 0 0}
-figcaption{font-size:.875rem;color:var(--muted);margin-top:.75rem}
-section{border-top:1px solid var(--rule);padding:3rem 0}
-h2{font-size:1.6rem;margin-bottom:1.5rem}
-h3{font-size:1.15rem;margin-bottom:.25rem}
-p{margin:0 0 1rem}
-.entries{display:grid;gap:1.75rem;margin:0;padding:0;list-style:none}
-.entries p{margin:0;color:var(--muted)}
-@media(min-width:640px){.entries{grid-template-columns:1fr 1fr;gap:2rem 2.5rem}}
-ol.steps{list-style:none;counter-reset:s;margin:0 0 1.5rem;padding:0}
-ol.steps li{counter-increment:s;display:grid;grid-template-columns:2.25rem 1fr;padding:.75rem 0;border-bottom:1px solid var(--rule)}
-ol.steps li::before{content:counter(s);font-family:ui-serif,"New York",Georgia,serif;font-size:1.4rem;line-height:1.3;color:var(--accent-text)}
-kbd{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.85em;border:1px solid var(--rule);border-radius:4px;padding:.05em .4em;background:var(--tint)}
-ul.plain{margin:0;padding:0;list-style:none}
-ul.plain li{padding:.6rem 0 .6rem 1.25rem;position:relative}
-ul.plain li::before{content:"";position:absolute;left:0;top:1.2rem;width:.6rem;height:2px;background:var(--accent)}
-.note{color:var(--muted);font-size:.9375rem}
-:not(pre)>code{background:var(--tint);border-radius:3px;padding:.1em .35em;font-size:.85em;overflow-wrap:anywhere}
-details{border-bottom:1px solid var(--rule);padding:.9rem 0}
-summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:1rem}
-summary::-webkit-details-marker{display:none}
-summary::after{content:"+";color:var(--accent-text);font-weight:400;font-size:1.25rem;line-height:1.3}
-details[open] summary::after{content:"\2212"}
-details p{margin:.6rem 0 0;color:var(--muted)}
-footer{border-top:1px solid var(--rule);padding:2rem 0 3rem;color:var(--muted);font-size:.875rem}
-footer p{margin:0 0 .4rem}
-footer a{color:var(--ink)}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
-@media print{
-  :root{--bg:#fff;--ink:#000;--muted:#333;--rule:#bbb;--tint:#fff}
-  .copy,.skip{display:none!important}
-  .cmd{background:#fff;color:#000;border:1px solid #000}
-  section,figure,details{break-inside:avoid}
-  details>*{display:block}
-}
-</style>
+<title>Pullshelf: a pull-down shelf for your Mac</title>
+<meta name="description" content="Pull down from the top of your screen for a terminal, clipboard history, a file drop zone and notes. Free and open source for macOS.">
+<link rel="canonical" href="https://pullshelf.com/">
+<meta name="theme-color" content="#121110">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Pullshelf">
+<meta property="og:title" content="Pullshelf: a pull-down shelf for your Mac"><meta property="og:description" content="Pull down from the top of your screen for a terminal, clipboard history, a file drop zone and notes. Free and open source for macOS.">
+<meta property="og:url" content="https://pullshelf.com/"><meta property="og:image" content="https://pullshelf.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://pullshelf.com/assets/og.png">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="preload" href="assets/vendor/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/site.css">
+<script>document.documentElement.classList.add('js');try{var t=localStorage.getItem('pullshelf-site-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Pullshelf","operatingSystem":"macOS 13+","applicationCategory":"ProductivityApplication","description":"A pull-down shelf for the Mac with a terminal, clipboard history, files and notes.","url":"https://pullshelf.com","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://opensource.org/license/mit"}</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<div class="wrap">
-<header>
-  <span class="wordmark"><i aria-hidden="true"></i>Perch</span>
-</header>
-
+<header class="nav"><a class="brand" href="index.html" aria-label="Pullshelf home"><i></i>Pullshelf</a>
+<nav aria-label="Main"><ul><li><a href="features.html">Features</a></li><li><a href="download.html">Download</a></li><li><a href="support.html">Support</a></li><li><a href="changelog.html">Changelog</a></li></ul></nav>
+<div class="nav-r"><button class="iconbtn" data-theme-toggle aria-label="Switch light or dark theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><a class="btn primary small" href="download.html">Download</a></div></header>
 <main id="main">
-  <div class="hero">
-    <h1>Perch</h1>
-    <p class="pitch">A pull-down shelf for the tools you already run.</p>
-    <div class="cmd">
-      <pre><code id="brew">brew install --cask yogeshvar/perch/perch</code></pre>
-      <button class="copy" type="button" aria-label="Copy install command">Copy</button>
-    </div>
-    <p class="hero-links">macOS 13 or later, Apple Silicon. Free and open source. <a href="https://github.com/yogeshvar/perch">View on GitHub</a></p>
+<section class="hero"><div class="wrap">
+  <div class="hero-copy">
+    <p class="eyebrow">For macOS · Free · Open source</p>
+    <h1>Your Mac's missing <em>shelf.</em></h1>
+    <p class="lede">Pull down from the top of the screen. A terminal, your clipboard history, a place to drop files, and notes, all one gesture away. Let go and it slides back.</p>
+    <div class="cta"><a class="btn primary" href="download.html">Download for Mac</a><a class="btn" href="https://github.com/yogeshvar/pullshelf">View on GitHub</a></div>
+    <div class="install"><code>brew install --cask yogeshvar/pullshelf/pullshelf</code><button type="button" data-copy="brew install --cask yogeshvar/pullshelf/pullshelf">Copy</button></div>
+    <p class="fine">Apple Silicon · macOS 13+ · v0.1.1</p>
   </div>
+  <div class="desk" data-hero role="img" aria-label="The Pullshelf shelf open: terminal, clipboard history, files and notes side by side">
+    <div class="menubar" aria-hidden="true"><b></b><span>Pullshelf</span><span class="sp"><span>⌘⇧L</span></span></div>
+    <div class="shelf" aria-hidden="true">
+      <div class="pane tool"><div class="ph">Terminal</div><div class="term"><span class="ln"><span class="p">~/app</span> git status</span>
+<span class="ln"><span class="d">3 files changed</span></span>
+<span class="ln"><span class="p">~/app</span> claude</span>
+<span class="ln"><span class="d">✻ How can I help?</span></span>
+<span class="ln"><span class="p">›</span> <span class="caret"></span></span></div></div>
+      <div class="pane clips"><div class="ph">Clipboard</div>
+        <div class="clip">npm run build<small>just now</small></div>
+        <div class="clip">https://pullshelf.com<small>2m</small></div>
+        <div class="clip">Meeting notes, Friday<small>9m</small></div></div>
+      <div class="pane files"><div class="ph">Files</div><div class="tiles">
+        <div class="tile"><i>PDF</i>invoice</div><div class="tile"><i>PNG</i>mock</div><div class="tile"><i>ZIP</i>assets</div><div class="tile"><i>TXT</i>todo</div></div></div>
+      <div class="pane notes"><div class="ph">Notes</div><div class="note" data-note="Ship the build.&#10;Reply to Sam.&#10;Rename the branch.">Ship the build.
+Reply to Sam.
+Rename the branch.</div></div>
+      <div class="handle">⚙</div>
+    </div></div>
+</div></section>
 
-  <figure>
-    <div class="shot">
-      <video id="demo" autoplay muted loop playsinline preload="metadata" poster="assets/perch-demo-poster.png" width="1280" height="640" aria-label="A short demo of Perch: the shelf slides down, runs a test in the terminal, copies a clipboard item, takes a dropped file, saves a quick note, collapses and resizes panes, and switches between light and dark.">
-        <source src="assets/perch-demo.webm" type="video/webm">
-        <source src="assets/perch-demo.mp4" type="video/mp4">
-        <img src="assets/perch-demo-poster.png" width="1280" height="640" alt="The Perch shelf open at the top of a Mac screen, showing the terminal, clipboard history, files and notes panes side by side.">
-      </video>
-    </div>
-    <figcaption>A scripted demo of the real interface, not a screen recording.</figcaption>
-  </figure>
+<section class="panes-scene" data-panes><div class="wrap panes-grid">
+  <div class="caps">
+    <div class="cap on"><p class="eyebrow">01 · Terminal</p><h2>Your shell, <em>right there.</em></h2><p>Start a shell, Claude Code or Codex without switching windows. Send a clip or a note straight into it.</p></div>
+    <div class="cap"><p class="eyebrow">02 · Clipboard</p><h2>Everything you <em>copied.</em></h2><p>Text and images, newest first. Search, favourite, copy it back, or send it to the terminal.</p></div>
+    <div class="cap"><p class="eyebrow">03 · Files</p><h2>Park it, <em>drag it back out.</em></h2><p>Drop files and folders on the shelf as references. Drag them into any app when you need them.</p></div>
+    <div class="cap"><p class="eyebrow">04 · Notes</p><h2>Notes that <em>start typing.</em></h2><p>A quick scratchpad with rename and search. Notes are saved as you type, and mirrored as Markdown files.</p></div>
+    <div class="steps" aria-hidden="true"><span><i></i></span><span><i></i></span><span><i></i></span><span><i></i></span></div>
+  </div>
+  <div class="desk"  role="img" aria-label="The Pullshelf shelf open: terminal, clipboard history, files and notes side by side">
+    <div class="menubar" aria-hidden="true"><b></b><span>Pullshelf</span><span class="sp"><span>⌘⇧L</span></span></div>
+    <div class="shelf" aria-hidden="true">
+      <div class="pane tool"><div class="ph">Terminal</div><div class="term"><span class="ln"><span class="p">~/app</span> git status</span>
+<span class="ln"><span class="d">3 files changed</span></span>
+<span class="ln"><span class="p">~/app</span> claude</span>
+<span class="ln"><span class="d">✻ How can I help?</span></span>
+<span class="ln"><span class="p">›</span> <span class="caret"></span></span></div></div>
+      <div class="pane clips"><div class="ph">Clipboard</div>
+        <div class="clip">npm run build<small>just now</small></div>
+        <div class="clip">https://pullshelf.com<small>2m</small></div>
+        <div class="clip">Meeting notes, Friday<small>9m</small></div></div>
+      <div class="pane files"><div class="ph">Files</div><div class="tiles">
+        <div class="tile"><i>PDF</i>invoice</div><div class="tile"><i>PNG</i>mock</div><div class="tile"><i>ZIP</i>assets</div><div class="tile"><i>TXT</i>todo</div></div></div>
+      <div class="pane notes"><div class="ph">Notes</div><div class="note" data-note="Ship the build.&#10;Reply to Sam.&#10;Rename the branch.">Ship the build.
+Reply to Sam.
+Rename the branch.</div></div>
+      <div class="handle">⚙</div>
+    </div></div>
+</div></section>
 
-  <section aria-labelledby="shelf">
-    <h2 id="shelf">What’s in the shelf</h2>
-    <ul class="entries" role="list">
-      <li><h3>Terminal</h3><p>A real terminal running the CLI you already use: Claude Code, Codex, your shell or a custom command. Real PTY, your own login, nothing embedded.</p></li>
-      <li><h3>Clipboard</h3><p>History of text and images, with favourites. Send an item to the terminal or open it in Claude.</p></li>
-      <li><h3>Files</h3><p>A drop shelf. Drag files in to keep them close, drag them back out. References only, nothing is copied.</p></li>
-      <li><h3>Notes</h3><p>Quick markdown notes. Rename them, search them.</p></li>
-    </ul>
-    <p class="note" style="margin-top:1.75rem">Panes collapse to slim rails and resize by dragging the dividers. Drag the shelf’s edge to change its height. Light and dark themes follow the system.</p>
-  </section>
+<section class="sec"><div class="wrap gesture" data-gesture>
+  <div>
+    <p class="eyebrow">The gesture</p>
+    <h2 data-rise>Pull. <em>It follows your fingers.</em></h2>
+    <p class="lede" data-rise>Two fingers at the top edge of the screen. The shelf tracks you one to one, and settles open or closed when you let go. Prefer the keyboard? <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>L</kbd>.</p>
+  </div>
+  <div>
+    <div class="pad" aria-hidden="true"><span class="finger"></span><span class="finger b"></span></div>
+    <div class="mini" aria-hidden="true" style="margin-top:20px"><div class="mb"></div><div class="lip"></div></div>
+  </div>
+</div></section>
 
-  <figure class="stills">
-    <div class="shot">
-      <picture>
-        <source srcset="assets/perch-dark.png" media="(prefers-color-scheme: dark)">
-        <img src="assets/perch-light.png" width="2880" height="1280" loading="lazy" decoding="async" alt="The Perch shelf open, showing the terminal, clipboard history, files and notes panes side by side.">
-      </picture>
-    </div>
-    <figcaption>The shelf, open: terminal, clipboard, files and notes in one row.</figcaption>
-  </figure>
+<hr class="rule">
+<section class="sec"><div class="wrap">
+  <p class="eyebrow">Built to stay out of the way</p>
+  <h2 data-rise>Small, local, <em>yours.</em></h2>
+  <div class="facts">
+    <div class="fact" data-rise><b>4</b><span>panes in one pull</span></div>
+    <div class="fact" data-rise><b>0</b><span>telemetry or accounts</span></div>
+    <div class="fact" data-rise><b>MIT</b><span>open source license</span></div>
+    <div class="fact" data-rise><b>⌘⇧L</b><span>or pull from the top edge</span></div>
+  </div>
+  <div class="grid3">
+    <div class="card" data-rise><h3>Private by design</h3><p>No network calls. Clips, notes and file references live in a local database on your Mac.</p></div>
+    <div class="card" data-rise><h3>Menu bar, your way</h3><p>Launch at login, hide the menu bar icon, quit from the menu. The shortcut and gesture still work.</p></div>
+    <div class="card" data-rise><h3>Light or dark</h3><p>Follows your Mac, or pick one. Panes collapse to slim rails and resize by dragging the dividers.</p></div>
+  </div>
+</div></section>
 
-  <section aria-labelledby="pull">
-    <h2 id="pull">The pull</h2>
-    <ol class="steps" role="list">
-      <li><span>Move the pointer to the top edge of the screen.</span></li>
-      <li><span>Pull down with two fingers on the trackpad.</span></li>
-      <li><span>The shelf slides open, with the terminal, clipboard, files and notes panes ready.</span></li>
-    </ol>
-    <p>Prefer the keyboard? Press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>L</kbd>. It works without any extra permission.</p>
-  </section>
+<section class="sec" style="background:var(--bg2)"><div class="wrap themes">
+  <div><p class="eyebrow">Themes</p><h2 data-rise>Dark or light. <em>Your call.</em></h2><p class="lede" data-rise>Try it: the toggle in the top bar switches this whole page and the shelf with it.</p></div>
+  <div class="desk"  role="img" aria-label="The Pullshelf shelf open: terminal, clipboard history, files and notes side by side">
+    <div class="menubar" aria-hidden="true"><b></b><span>Pullshelf</span><span class="sp"><span>⌘⇧L</span></span></div>
+    <div class="shelf" aria-hidden="true">
+      <div class="pane tool"><div class="ph">Terminal</div><div class="term"><span class="ln"><span class="p">~/app</span> git status</span>
+<span class="ln"><span class="d">3 files changed</span></span>
+<span class="ln"><span class="p">~/app</span> claude</span>
+<span class="ln"><span class="d">✻ How can I help?</span></span>
+<span class="ln"><span class="p">›</span> <span class="caret"></span></span></div></div>
+      <div class="pane clips"><div class="ph">Clipboard</div>
+        <div class="clip">npm run build<small>just now</small></div>
+        <div class="clip">https://pullshelf.com<small>2m</small></div>
+        <div class="clip">Meeting notes, Friday<small>9m</small></div></div>
+      <div class="pane files"><div class="ph">Files</div><div class="tiles">
+        <div class="tile"><i>PDF</i>invoice</div><div class="tile"><i>PNG</i>mock</div><div class="tile"><i>ZIP</i>assets</div><div class="tile"><i>TXT</i>todo</div></div></div>
+      <div class="pane notes"><div class="ph">Notes</div><div class="note" data-note="Ship the build.&#10;Reply to Sam.&#10;Rename the branch.">Ship the build.
+Reply to Sam.
+Rename the branch.</div></div>
+      <div class="handle">⚙</div>
+    </div></div>
+</div></section>
 
-  <section aria-labelledby="private">
-    <h2 id="private">Private by design</h2>
-    <ul class="plain" role="list">
-      <li>Everything stays on your Mac. Notes, clipboard history and settings live in <code>~/Library/Application Support/Perch</code> (each note is also saved as a markdown file in its <code>notes</code> folder).</li>
-      <li>No accounts and no analytics.</li>
-      <li>No network calls from Perch itself. The terminal runs your own tools under your own login.</li>
-    </ul>
-  </section>
+<section class="sec support"><div class="wrap">
+  <p class="eyebrow">Price</p>
+  <h2 data-rise>Free. <em>Open source.</em></h2>
+  <p class="lede" data-rise>Pullshelf costs nothing and always will for the app itself. No accounts, no locked features, no nagging. If you like it, a star on GitHub or a word to a friend helps more than you'd think.</p>
+  <div class="cta"><a class="btn primary" href="download.html">Download for Mac</a><a class="btn" href="https://github.com/yogeshvar/pullshelf">Star on GitHub</a></div>
+</div></section>
 
-  <section aria-labelledby="install">
-    <h2 id="install">Install</h2>
-    <div class="cmd">
-      <pre><code id="brew2">brew install --cask yogeshvar/perch/perch</code></pre>
-      <button class="copy" type="button" aria-label="Copy install command again">Copy</button>
-    </div>
-    <p class="note" style="margin-top:1rem">The cask lives in the tap <code>yogeshvar/homebrew-perch</code>. The source is on <a href="https://github.com/yogeshvar/perch">GitHub</a>. Requires macOS 13 or later on Apple Silicon.</p>
-    <h3 style="margin-top:2rem">First launch</h3>
-    <p>Perch is ad-hoc signed and not notarized, so macOS blocks the first launch. Open System Settings, go to Privacy &amp; Security, and click Open Anyway (macOS 15 and later; on macOS 13 and 14, right-click the app and choose Open). Or clear the quarantine flag from a terminal:</p>
-    <div class="cmd">
-      <pre><code>xattr -dr com.apple.quarantine /Applications/Perch.app</code></pre>
-    </div>
-    <p class="note" style="margin-top:1rem">The pull gesture needs macOS Accessibility permission. Grant it in System Settings, Privacy &amp; Security, Accessibility. You may need to grant it again after an update. <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>L</kbd> works either way.</p>
-  </section>
-
-  <section aria-labelledby="faq">
-    <h2 id="faq">Questions</h2>
-    <details>
-      <summary>Does it embed Claude?</summary>
-      <p>No. The terminal pane runs the CLI you install yourself, such as Claude Code or Codex, in a real PTY with your own login. Perch embeds nothing and is not affiliated with Anthropic or OpenAI.</p>
-    </details>
-    <details>
-      <summary>Does it run on Intel Macs?</summary>
-      <p>No. Perch is built for Apple Silicon.</p>
-    </details>
-    <details>
-      <summary>Why does it ask for Accessibility?</summary>
-      <p>Only for the two-finger pull at the top edge of the screen. Without the permission the gesture is off, but the <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>L</kbd> shortcut still works.</p>
-    </details>
-    <details>
-      <summary>How do I quit, or hide the menu bar icon?</summary>
-      <p>Both are in the menu bar icon’s menu and in the gear tab of the shelf. Settings also cover launch at login and the scroll gesture permission.</p>
-    </details>
-  </section>
+<section class="sec faq"><div class="wrap prose" style="max-width:820px">
+  <h2>Questions</h2>
+  <div style="margin-top:36px"><details><summary>Is Pullshelf free?</summary><p>Yes. Pullshelf is open source under the MIT license. You can build it yourself, install it with Homebrew, or download the zip, at no cost. There are no paid tiers, locked features or accounts.</p></details><details><summary>Which Macs does it run on?</summary><p>Apple Silicon Macs running macOS 13 or newer. An Intel build is not available yet.</p></details><details><summary>Why does macOS warn me on first launch?</summary><p>Pullshelf is ad-hoc signed but not yet notarized by Apple. On first launch, open it once, then go to System Settings, Privacy &amp; Security, and choose Open Anyway. Notarization is planned.</p></details><details><summary>What does it send over the network?</summary><p>Nothing. There is no telemetry, no account and no cloud sync. Your clips, notes and file references stay in a local database on your Mac.</p></details><details><summary>Why does it ask for Accessibility permission?</summary><p>Only the pull-down gesture needs it, to read two-finger scrolls at the top screen edge. You can skip it and open Pullshelf with ⌘⇧L or from the menu bar icon.</p></details><details><summary>Does it work with Claude Code or Codex?</summary><p>Yes. The terminal pane can start your shell, Claude Code or Codex, and you can send a clip or note straight into it.</p></details></div>
+</div></section>
 </main>
-
-<footer>
-  <p>Perch is open source under the MIT license. <a href="https://github.com/yogeshvar/perch">github.com/yogeshvar/perch</a></p>
-  <p>Not affiliated with Anthropic or OpenAI.</p>
-</footer>
-</div>
-<script>
-(function(){var v=document.getElementById('demo');if(v&&window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){v.removeAttribute('autoplay');v.pause();v.controls=true;}})();
-if(navigator.clipboard)document.documentElement.classList.add('js');
-document.querySelectorAll('.cmd').forEach(function(b){
-  var btn=b.querySelector('.copy'),code=b.querySelector('code');
-  if(!btn||!navigator.clipboard)return;
-  btn.addEventListener('click',function(){
-    navigator.clipboard.writeText(code.textContent).then(function(){
-      btn.textContent='Copied';setTimeout(function(){btn.textContent='Copy'},1500);
-    },function(){
-      var r=document.createRange();r.selectNodeContents(code);var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);
-      btn.textContent='Press ⌘C';setTimeout(function(){btn.textContent='Copy'},2500);
-    });
-  });
-});
-</script>
-</body>
-</html>
+<footer><div class="wrap foot"><div><a class="brand" href="index.html"><i></i>Pullshelf</a><p>A pull-down shelf for the Mac.<br>MIT licensed. No telemetry.</p>
+<p>Not affiliated with Anthropic or OpenAI.</p></div>
+<ul><li><a href="features.html">Features</a></li><li><a href="download.html">Download</a></li><li><a href="support.html">Support</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="privacy.html">Privacy</a></li><li><a href="press.html">Press</a></li><li><a href="https://github.com/yogeshvar/pullshelf">GitHub</a></li></ul></div></footer>
+<script src="assets/vendor/gsap.min.js" defer></script><script src="assets/vendor/ScrollTrigger.min.js" defer></script><script src="assets/vendor/lenis.min.js" defer></script><script src="assets/site.js" defer></script>
+</body></html>
