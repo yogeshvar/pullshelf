@@ -138,6 +138,17 @@ kbd{border:1px solid var(--rule);border-bottom-width:2px;border-radius:6px;paddi
 .themes .desk{aspect-ratio:16/10}
 .themes .shelf{height:86%}
 
+/* proof — only rendered when PROOF has real quotes or a star count */
+.proof-head{display:flex;align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:32px}
+.proof-head .eyebrow{margin:0}
+.proof-stars{font:500 13px/1 var(--mono);color:var(--muted);margin:0}
+.proof-stars a{color:var(--ink);text-decoration-color:var(--accent);text-underline-offset:3px}
+.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:20px}
+.quote{margin:0;border:1px solid var(--rule);border-radius:16px;padding:28px;background:var(--bg2);max-width:620px}
+.quote blockquote{margin:0;font:400 24px/1.35 var(--display);letter-spacing:-.01em}
+.quote figcaption{margin-top:18px;color:var(--muted);font-size:14px}
+.quote figcaption a{color:var(--ink);text-decoration-color:var(--accent);text-underline-offset:3px}
+
 /* support */
 .support{text-align:center}
 .support .lede{margin-inline:auto}

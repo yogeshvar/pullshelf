@@ -92,23 +92,45 @@ ${foot}
 const faq = [
   ['Is Pullshelf free?', 'Yes. Pullshelf is open source under the MIT license. You can build it yourself, install it with Homebrew, or download the zip, at no cost. There are no paid tiers, locked features or accounts.'],
   ['Which Macs does it run on?', 'Apple Silicon Macs running macOS 13 or newer. An Intel build is not available yet.'],
+  ['How is this different from Unclutter or Ghostty\'s quick terminal?', 'Unclutter is a pull-down panel for your clipboard, files and notes. Ghostty\'s quick terminal (like iTerm2\'s hotkey window) is a drop-down terminal. Pullshelf puts all four panes in a single pull-down, so a real terminal sits beside your clipboard, file references and notes, and you can send a clip or note into it. It is free, open source and MIT licensed.'],
   ['Why does macOS warn me on first launch?', 'Pullshelf is ad-hoc signed but not yet notarized by Apple. On first launch, open it once, then go to System Settings, Privacy &amp; Security, and choose Open Anyway. Notarization is planned.'],
   ['What does it send over the network?', 'Nothing. There is no telemetry, no account and no cloud sync. Your clips, notes and file references stay in a local database on your Mac.'],
   ['Why does it ask for Accessibility permission?', 'Only the pull-down gesture needs it, to read two-finger scrolls at the top screen edge. You can skip it and open Pullshelf with ⌘⇧L or from the menu bar icon.'],
   ['Does it work with Claude Code or Codex?', 'Yes. The terminal pane can start your shell, Claude Code or Codex, and you can send a clip or note straight into it.']
 ]
 
+// Real proof only. Leave this empty until there is something true to show.
+// quotes: [{ text, name, handle, url }] — url and handle are optional.
+// stars: set to the GitHub star count when you update the site after launch.
+const PROOF = { stars: null, quotes: [] }
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+function proof() {
+  const { stars, quotes } = PROOF
+  if (!quotes.length && !stars) return ''
+  const starLabel = stars === 1 ? '1 star on GitHub' : `${stars} stars on GitHub`
+  return `<section class="sec"><div class="wrap">
+  <div class="proof-head">
+    <h2 class="eyebrow">What people say</h2>
+    ${stars ? `<p class="proof-stars"><a href="${REPO}/stargazers">${starLabel}</a></p>` : ''}
+  </div>
+  <div class="quotes">${quotes.map(({ text, name, handle, url }) => `<figure class="quote"><blockquote>${esc(text)}</blockquote><figcaption>${url ? `<a href="${esc(url)}">${esc(name)}</a>` : esc(name)}${handle ? ` <span>${esc(handle)}</span>` : ''}</figcaption></figure>`).join('')}</div>
+</div></section>
+
+`
+}
+
 page({
   file: 'index.html',
-  title: 'Pullshelf: a pull-down shelf for your Mac',
-  desc: 'Pull down from the top of your screen for a terminal, clipboard history, a file drop zone and notes. Free and open source for macOS.',
+  title: 'Pullshelf: a pull-down terminal for your Mac',
+  desc: 'Pull down a real terminal from the top of your screen, with clipboard history, file references and notes beside it. Free and open source for macOS.',
   current: '',
-  extra: `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'Pullshelf', operatingSystem: 'macOS 13+', applicationCategory: 'ProductivityApplication', description: 'A pull-down shelf for the Mac with a terminal, clipboard history, files and notes.', url: SITE, offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, license: 'https://opensource.org/license/mit' })}</script>`,
+  extra: `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'Pullshelf', operatingSystem: 'macOS 13+', applicationCategory: 'ProductivityApplication', description: 'A pull-down terminal for the Mac, with clipboard history, files and notes.', url: SITE, offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, license: 'https://opensource.org/license/mit' })}</script>`,
   body: `<section class="hero"><div class="wrap">
   <div class="hero-copy">
     <p class="eyebrow">For macOS · Free · Open source</p>
     <h1>Your Mac's missing <em>shelf.</em></h1>
-    <p class="lede">Pull down from the top of the screen. A terminal, your clipboard history, a place to drop files, and notes, all one gesture away. Let go and it slides back.</p>
+    <p class="lede">Pull down a real terminal from the top of your screen, with your clipboard, files and notes beside it. Run Claude Code or Codex without a dedicated window. Let go and it slides back.</p>
     <div class="cta"><a class="btn primary" href="download.html">Download for Mac</a><a class="btn" href="${REPO}">View on GitHub</a></div>
     ${install}
     <p class="fine">Apple Silicon · macOS 13+ · v0.1.1</p>
@@ -161,10 +183,10 @@ page({
   ${shelf()}
 </div></section>
 
-<section class="sec support"><div class="wrap">
+${proof()}<section class="sec support"><div class="wrap">
   <p class="eyebrow">Price</p>
   <h2 data-rise>Free. <em>Open source.</em></h2>
-  <p class="lede" data-rise>Pullshelf costs nothing and always will for the app itself. No accounts, no locked features, no nagging. If you like it, a star on GitHub or a word to a friend helps more than you'd think.</p>
+  <p class="lede" data-rise>Pullshelf is free and open source. No accounts, no locked features, no nagging. If you like it, a star on GitHub or a word to a friend helps more than you'd think.</p>
   <div class="cta"><a class="btn primary" href="download.html">Download for Mac</a><a class="btn" href="${REPO}">Star on GitHub</a></div>
 </div></section>
 

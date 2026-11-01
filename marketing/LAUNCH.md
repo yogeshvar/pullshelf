@@ -111,3 +111,5 @@ Target: indie Mac app newsletters, Mac/dev YouTubers and bloggers who cover util
 ## What to measure (no vanity)
 
 GitHub release downloads, brew installs (public analytics), stars, issues opened, Vercel Analytics visitors and the `download_zip` and `copy_brew` events, and replies that say "I use this daily".
+
+When you have real proof, fill `PROOF` in `build/site.mjs` (first user quotes, star count) and run `node build/site.mjs`. The section stays hidden while `PROOF` is empty. Never seed it with fake content.
