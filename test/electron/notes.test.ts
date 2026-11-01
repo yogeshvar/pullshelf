@@ -1,9 +1,9 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { attachWebContents } from '../../electron/bus'
 import { openDatabase } from '../../electron/db'
-import { createNote, deleteNote, listNotes, noteBody, renameNote, startNotes, updateNote } from '../../electron/notes'
+import { createNote, deleteNote, isNoteId, listNotes, noteBody, renameNote, startNotes, updateNote } from '../../electron/notes'
 import { tempDir } from '../helpers/tmp'
 
 let dir: string
@@ -123,6 +123,60 @@ describe('deleteNote', () => {
   })
 })
 
+describe('note ids from the renderer', () => {
+  const db = () => openDatabase(dir)
+  const insert = (id: string) =>
+    db().prepare('INSERT INTO notes (id, title, body, created_at, updated_at) VALUES (?, ?, ?, 1, 1)').run(id, 't', 'b')
+
+  it('never deletes a file outside the notes folder', () => {
+    const outside = join(dir, 'secret.md')
+    writeFileSync(outside, 'keep')
+    for (const id of ['../secret', '..%2fsecret', '/etc/passwd', `${dir}/secret`]) deleteNote(id)
+    expect(readFileSync(outside, 'utf8')).toBe('keep')
+  })
+
+  it('leaves a markdown file alone when no such note exists', () => {
+    const id = '0d6c3c2e-2b6b-4c1a-9d1e-0123456789ab'
+    writeFileSync(mirror(id), 'stray')
+    deleteNote(id)
+    expect(readFileSync(mirror(id), 'utf8')).toBe('stray')
+  })
+
+  it('only accepts a bare UUID, with nothing before or after it', () => {
+    const id = '0d6c3c2e-2b6b-4c1a-9d1e-0123456789ab'
+    expect(isNoteId(id)).toBe(true)
+    for (const bad of [`${id}/../../secret`, `${id}\n`, `\n${id}`, `${id}\0`, `${id}.md`, ` ${id}`, `${id}x`, '', '..']) {
+      expect(isNoteId(bad)).toBe(false)
+    }
+  })
+
+  it('refuses ids that are not UUIDs, even when such a row exists', () => {
+    insert('../evil')
+    expect(updateNote('../evil', 'x')).toBeNull()
+    expect(renameNote('../evil', 'x')).toBeNull()
+    expect(noteBody('../evil')).toBeNull()
+    expect(existsSync(join(dir, 'evil.md'))).toBe(false)
+    deleteNote('../evil')
+    expect(listNotes().map((n) => n.id)).toEqual(['../evil'])
+  })
+})
+
+describe('deleted notes leave no trace in the database', () => {
+  it('removes the body from the database file and its WAL', () => {
+    const marker = 'NOTE-SECRET-41be7'
+    const { id } = createNote()
+    updateNote(id, marker)
+    const onDisk = () =>
+      ['pullshelf.db', 'pullshelf.db-wal']
+        .map((name) => join(dir, name))
+        .filter((path) => existsSync(path))
+        .some((path) => readFileSync(path).includes(marker))
+    expect(onDisk()).toBe(true)
+    deleteNote(id)
+    expect(onDisk()).toBe(false)
+  })
+})
+
 describe('noteBody', () => {
   it('returns the body, or null when the note does not exist', () => {
     const { id } = createNote()
@@ -141,6 +195,11 @@ describe('before startNotes is called', () => {
     expect(fresh.renameNote('x', 'y')).toBeNull()
     expect(fresh.noteBody('x')).toBeNull()
     expect(fresh.deleteNote('x')).toEqual([])
+    const uuid = '0d6c3c2e-2b6b-4c1a-9d1e-0123456789ab'
+    expect(fresh.updateNote(uuid, 'y')).toBeNull()
+    expect(fresh.renameNote(uuid, 'y')).toBeNull()
+    expect(fresh.noteBody(uuid)).toBeNull()
+    expect(fresh.deleteNote(uuid)).toEqual([])
     // Creating still returns a note; nothing can be stored or mirrored without a database.
     expect(fresh.createNote().title).toBe('New note')
   })

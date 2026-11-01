@@ -242,7 +242,21 @@ describe('the window', () => {
     m.win().webContents.fire('will-navigate', other, 'file:///Users/me/dropped.txt')
     expect(other.preventDefault).toHaveBeenCalled()
     expect(m.win().webContents.openHandler?.({ url: 'https://example.com' })).toEqual({ action: 'deny' })
-    expect(m.shell.openExternal).toHaveBeenCalledWith('https://example.com')
+    expect(m.shell.openExternal).toHaveBeenCalledWith('https://example.com/')
+  })
+
+  it('opens only https links in the browser and refuses every other scheme', async () => {
+    const m = await bootMain()
+    const open = (url: string) => m.win().webContents.openHandler?.({ url })
+    for (const url of ['file:///etc/passwd', 'http://example.com', 'javascript:alert(1)', 'smb://host/share', 'x-apple.systempreferences:', 'https//evil.com', 'not a url', '']) {
+      expect(open(url)).toEqual({ action: 'deny' })
+    }
+    expect(m.shell.openExternal).not.toHaveBeenCalled()
+    expect(open('HTTPS://Example.com/a?b=1')).toEqual({ action: 'deny' })
+    // The browser gets the URL as parsed, the same one that was checked.
+    expect(m.shell.openExternal).toHaveBeenCalledWith('https://example.com/a?b=1')
+    open(' https://example.com/x')
+    expect(m.shell.openExternal).toHaveBeenLastCalledWith('https://example.com/x')
   })
 
   it('still blocks navigation after the window is gone', async () => {

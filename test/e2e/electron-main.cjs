@@ -14,6 +14,12 @@ async function main() {
     webPreferences: { contextIsolation: false, sandbox: false, preload: path.join(__dirname, 'stub-preload.cjs') }
   })
   await win.loadFile(path.join(__dirname, '../../out/renderer/index.html'))
+  // Every Content Security Policy violation the page reports (Chromium logs them to the console).
+  const cspViolations = []
+  win.webContents.on('console-message', (event, _level, legacyMessage) => {
+    const message = (event && event.message) || legacyMessage || ''
+    if (message.includes('Content Security Policy')) cspViolations.push(message)
+  })
   const run = (js) => win.webContents.executeJavaScript(js)
   const send = (type, x, y, extra = {}) => win.webContents.sendInputEvent({ type, x, y, button: 'left', clickCount: 1, ...extra })
 
@@ -49,6 +55,25 @@ async function main() {
     assert.equal(w.length, 4)
     assert.ok(Math.abs(w.reduce((a, b) => a + b, 0) + d.reduce((a, b) => a + b[1], 0) - WIDTH) <= 3, `widths ${w} do not fill ${WIDTH}`)
     w.forEach((value, i) => assert.ok(value >= MINS[i] - 1, `pane ${i} is ${value}px, below ${MINS[i]}`))
+  })
+
+  await test('the built page carries a Content Security Policy that blocks inline scripts and eval', async () => {
+    await reload({})
+    const csp = await run(`document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content ?? ''`)
+    assert.match(csp, /script-src 'self'/)
+    const result = JSON.parse(await run(`(() => {
+      window.__inlineRan = false
+      const s = document.createElement('script')
+      s.textContent = 'window.__inlineRan = true'
+      document.head.appendChild(s)
+      let evalRan = true
+      try { eval('1') } catch { evalRan = false }
+      return JSON.stringify({ inline: window.__inlineRan, eval: evalRan, panes: document.querySelectorAll('.columns > .pane').length })
+    })()`))
+    assert.deepEqual(result, { inline: false, eval: false, panes: 4 })
+    await wait(100)
+    assert.ok(cspViolations.length >= 1, 'the blocked inline script should have been reported')
+    cspViolations.length = 0 // the deliberate violations above are expected; nothing else may trip the policy
   })
 
   const combos = [
@@ -154,6 +179,11 @@ async function main() {
     send('mouseDown', quit[0], quit[1]); send('mouseUp', quit[0], quit[1]); await wait(150)
     const names = JSON.parse(await run('JSON.stringify(window.__calls.map(c => c[0]))'))
     assert.ok(names.includes('quit'), 'clicking Quit Pullshelf should call the bridge')
+  })
+
+  await test('nothing in the app trips the Content Security Policy', async () => {
+    await wait(100)
+    assert.deepEqual(cspViolations, [])
   })
 }
 

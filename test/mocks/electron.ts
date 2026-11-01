@@ -12,7 +12,9 @@ export const electronState = {
   displayFrequency: 60,
   cursor: { x: 800, y: 400 },
   clipboardText: '',
-  clipboardImage: null as Buffer | null
+  clipboardImage: null as Buffer | null,
+  /** Raw macOS pasteboard types on the clipboard, e.g. org.nspasteboard.ConcealedType. */
+  clipboardFormats: [] as string[]
 }
 
 export class FakeImage {
@@ -240,7 +242,11 @@ export const clipboard = {
   writeText: vi.fn(async (text: string) => {
     electronState.clipboardText = text
   }),
-  has: vi.fn(async (_type: string) => electronState.clipboardImage !== null),
+  has: vi.fn(async (type: string) => {
+    if (type === 'image/png') return electronState.clipboardImage !== null
+    const raw = /^electron application\/osclipboard;format="(.+)"$/.exec(type)
+    return raw ? electronState.clipboardFormats.includes(raw[1]) : false
+  }),
   read: vi.fn(async () =>
     electronState.clipboardImage
       ? [new ClipboardItem({ 'image/png': new Blob([Uint8Array.from(electronState.clipboardImage)]) })]
@@ -291,7 +297,8 @@ export function resetElectron(): void {
     displayFrequency: 60,
     cursor: { x: 800, y: 400 },
     clipboardText: '',
-    clipboardImage: null
+    clipboardImage: null,
+    clipboardFormats: []
   })
   BrowserWindow.instances = []
   Tray.instances = []

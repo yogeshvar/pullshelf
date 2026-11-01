@@ -44,6 +44,8 @@ export function openDatabase(userData: string): Database.Database {
   mkdirSync(userData, { recursive: true })
   const db = new Database(join(userData, 'pullshelf.db'))
   db.pragma('journal_mode = WAL')
+  // Zero out deleted rows so cleared clips and notes do not linger in the file's free pages.
+  db.pragma('secure_delete = ON')
   db.exec(`
     CREATE TABLE IF NOT EXISTS clips (
       id TEXT PRIMARY KEY,
@@ -78,6 +80,12 @@ export function openDatabase(userData: string): Database.Database {
     // Column already exists.
   }
   return db
+}
+
+// After a deletion, fold the WAL back into the (secure_delete-zeroed) database and truncate it, so the
+// old rows do not linger in pullshelf.db-wal until SQLite decides to checkpoint on its own.
+export function scrub(db: Database.Database): void {
+  db.pragma('wal_checkpoint(TRUNCATE)')
 }
 
 export function readSettings(db: Database.Database, fallbackCwd: string): Settings {

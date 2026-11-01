@@ -19,6 +19,11 @@ describe('openDatabase', () => {
     expect(names(db)).toEqual(expect.arrayContaining(['clips', 'files', 'notes', 'settings']))
   })
 
+  it('overwrites deleted clips on disk (secure_delete), so cleared history cannot be recovered from the file', () => {
+    const db = openDatabase(tempDir())
+    expect(db.pragma('secure_delete', { simple: true })).toBe(1)
+  })
+
   it('adds the title_locked column to notes', () => {
     const db = openDatabase(tempDir())
     db.prepare('INSERT INTO notes (id, title, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').run('n', 't', 'b', 1, 2)

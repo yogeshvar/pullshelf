@@ -183,8 +183,10 @@ function createWindow(): void {
     console.error('[pullshelf] child process gone:', details.type, details.reason, details.exitCode)
   })
 
+  // Only web links leave the app; file:, custom schemes and anything else stay closed.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url)
+    const safe = httpsUrl(url)
+    if (safe) void shell.openExternal(safe)
     return { action: 'deny' }
   })
 
@@ -626,6 +628,16 @@ function applyConfig(current: Settings, config: unknown): Settings {
     presetId: isPresetId(patch.presetId) ? patch.presetId : current.presetId,
     customCommand: typeof patch.customCommand === 'string' ? patch.customCommand : current.customCommand,
     cwd: typeof patch.cwd === 'string' && patch.cwd.startsWith('/') ? patch.cwd : current.cwd
+  }
+}
+
+// The parsed form of an https: URL, so the browser opens exactly what was checked; null for anything else.
+function httpsUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'https:' ? parsed.href : null
+  } catch {
+    return null
   }
 }
 
