@@ -60,6 +60,10 @@ class FakeEmitter {
     this.emitter.on(event, handler as never)
     return this
   })
+  off = vi.fn((event: string, handler: (...args: never[]) => void) => {
+    this.emitter.off(event, handler as never)
+    return this
+  })
   once = vi.fn((event: string, handler: (...args: never[]) => void) => {
     this.emitter.once(event, handler as never)
     return this
@@ -70,6 +74,9 @@ class FakeEmitter {
   }
   listenerCount(event: string) {
     return this.emitter.listenerCount(event)
+  }
+  reset() {
+    this.emitter.removeAllListeners()
   }
 }
 
@@ -201,6 +208,8 @@ class FakeApp extends FakeEmitter {
 
 export const app = new FakeApp()
 
+export const powerMonitor = new FakeEmitter()
+
 type Handler = (event: unknown, ...args: unknown[]) => unknown
 const handlers = new Map<string, Handler>()
 const listeners = new Map<string, Handler>()
@@ -312,4 +321,5 @@ export function resetElectron(): void {
   listeners.clear()
   ipcRendererListeners.clear()
   contextBridge.exposed = {}
+  powerMonitor.reset()
 }

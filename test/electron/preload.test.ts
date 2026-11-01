@@ -50,6 +50,7 @@ describe('preload bridge', () => {
       ['sendToTool', ['hi'], 'tool:send', ['hi']],
       ['openInClaude', ['hi', 'code'], 'claude:open', ['hi', 'code']],
       ['copyClip', ['c'], 'clips:copy', ['c']],
+      ['clipText', ['c'], 'clips:text', ['c']],
       ['toggleFavorite', ['c'], 'clips:favorite', ['c']],
       ['deleteClip', ['c'], 'clips:delete', ['c']],
       ['clearHistory', [], 'clips:clear', []],

@@ -1,10 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ClipboardPane } from '../../src/shelf/ClipboardPane'
-import { installPullshelf, makeClip } from '../helpers/pullshelf'
+import { installPullshelf, makeClip, makeState } from '../helpers/pullshelf'
 
 const setup = (clips = [makeClip()], collapsed = false) => {
-  const bridge = installPullshelf()
+  const bridge = installPullshelf(makeState({ clips }))
   const onToast = vi.fn()
   const onToggle = vi.fn()
   const view = render(<ClipboardPane clips={clips} onToast={onToast} collapsed={collapsed} onToggle={onToggle} />)
@@ -97,6 +97,32 @@ describe('ClipboardPane actions', () => {
       vi.advanceTimersByTime(600)
     })
     expect(screen.queryByText('Copied')).not.toBeInTheDocument()
+  })
+
+  it('fetches the clip text on demand before sending it to the tool or Claude', async () => {
+    const { pullshelf, onToast } = setup([makeClip({ id: 'a', text: null, preview: 'hello' })])
+    pullshelf.clipText.mockResolvedValueOnce('hello from disk')
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    })
+    expect(pullshelf.clipText).toHaveBeenCalledWith('a')
+    expect(pullshelf.sendToTool).toHaveBeenCalledWith('hello from disk')
+    expect(onToast).toHaveBeenLastCalledWith('Sent to the tool')
+    pullshelf.clipText.mockResolvedValueOnce('hello from disk')
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Claude' }))
+    })
+    expect(pullshelf.openInClaude).toHaveBeenCalledWith('hello from disk', 'chat')
+  })
+
+  it('does nothing when the clip text cannot be fetched', async () => {
+    const { pullshelf, onToast } = setup([makeClip({ id: 'a', text: null })])
+    pullshelf.clipText.mockResolvedValueOnce(null)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    })
+    expect(pullshelf.sendToTool).not.toHaveBeenCalled()
+    expect(onToast).not.toHaveBeenCalled()
   })
 
   it('send reports success or the reason it failed', async () => {

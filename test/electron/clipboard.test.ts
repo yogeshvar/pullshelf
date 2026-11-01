@@ -41,7 +41,8 @@ describe('polling text', () => {
     c.startClipboard(c.db, c.dir)
     await c.flush()
     const [clip] = c.listClips()
-    expect(clip).toMatchObject({ kind: 'text', text: 'hello   world\n  again', preview: 'hello world again', favorite: false, thumb: null })
+    expect(clip).toMatchObject({ kind: 'text', text: null, preview: 'hello world again', favorite: false, thumb: null })
+    expect(c.clipText(clip.id)).toBe('hello   world\n  again')
     expect(c.sent.at(-1)).toEqual(['clips:changed', c.listClips()])
     c.stopClipboard()
   })
@@ -61,7 +62,7 @@ describe('polling text', () => {
     expect(c.listClips()).toEqual([])
     c.electronState.clipboardText = 'second'
     await c.tick()
-    expect(c.listClips().map((x) => x.text)).toEqual(['second'])
+    expect(c.listClips().map((x) => c.clipText(x.id))).toEqual(['second'])
     c.stopClipboard()
   })
 
@@ -90,7 +91,7 @@ describe('polling text', () => {
     await c.tick()
     // Advancing the fake clock for each poll adds 700 ms, so compare ordering, not exact times.
     const [first, second, ...rest] = c.listClips()
-    expect([first.text, second.text, rest]).toEqual(['first', 'second', []])
+    expect([c.clipText(first.id), c.clipText(second.id), rest]).toEqual(['first', 'second', []])
     expect(first.createdAt).toBeGreaterThan(second.createdAt)
     expect(first.createdAt).toBeGreaterThanOrEqual(3_000)
     c.stopClipboard()
@@ -128,9 +129,10 @@ describe('polling text', () => {
     }
     const clips = c.listClips()
     expect(clips).toHaveLength(51)
-    expect(clips[0]).toMatchObject({ text: 'keep me', favorite: true })
-    expect(clips.some((x) => x.text === 'item 0')).toBe(false)
-    expect(clips.some((x) => x.text === 'item 54')).toBe(true)
+    expect(clips[0]).toMatchObject({ preview: 'keep me', favorite: true })
+    expect(c.clipText(clips[0].id)).toBe('keep me')
+    expect(clips.some((x) => c.clipText(x.id) === 'item 0')).toBe(false)
+    expect(clips.some((x) => c.clipText(x.id) === 'item 54')).toBe(true)
     c.stopClipboard()
   })
 
@@ -141,7 +143,7 @@ describe('polling text', () => {
     await c.flush()
     c.electronState.clipboardText = 'recovered'
     await c.tick()
-    expect(c.listClips().map((x) => x.text)).toEqual(['recovered'])
+    expect(c.listClips().map((x) => c.clipText(x.id))).toEqual(['recovered'])
     c.stopClipboard()
   })
 
@@ -155,7 +157,7 @@ describe('polling text', () => {
     c.electronState.clipboardText = 'late'
     release('late')
     await c.flush()
-    expect(c.listClips().map((x) => x.text)).toEqual(['late'])
+    expect(c.listClips().map((x) => c.clipText(x.id))).toEqual(['late'])
     c.stopClipboard()
   })
 
@@ -209,7 +211,7 @@ describe('password managers and other private copies', () => {
     c.electronState.clipboardFormats = []
     vi.setSystemTime(Date.now() + 10_000)
     await c.tick()
-    expect(c.listClips().map((x) => x.text)).toEqual(['normal'])
+    expect(c.listClips().map((x) => c.clipText(x.id))).toEqual(['normal'])
     expect(c.listClips()[0].createdAt).toBeGreaterThanOrEqual(Date.now() - 1_000)
     c.stopClipboard()
   })
@@ -226,9 +228,9 @@ describe('password managers and other private copies', () => {
     })
     c.startClipboard(c.db, c.dir)
     await c.flush()
-    expect(c.listClips().map((x) => x.text)).not.toContain('hunter2')
+    expect(c.listClips().map((x) => c.clipText(x.id))).not.toContain('hunter2')
     await c.tick()
-    expect(c.listClips().map((x) => x.text)).toEqual(['normal'])
+    expect(c.listClips().map((x) => c.clipText(x.id))).toEqual(['normal'])
     c.stopClipboard()
   })
 
@@ -257,7 +259,7 @@ describe('password managers and other private copies', () => {
     expect(c.listClips()).toEqual([])
     c.electronState.clipboardFormats = []
     await c.tick()
-    expect(c.listClips().map((x) => x.text)).toEqual(['shared'])
+    expect(c.listClips().map((x) => c.clipText(x.id))).toEqual(['shared'])
     c.stopClipboard()
   })
 })
@@ -379,7 +381,7 @@ describe('copyClip', () => {
     await c.flush()
     c.electronState.clipboardText = 'something else'
     await c.tick()
-    const old = c.listClips().find((x) => x.text === 'from history')!
+    const old = c.listClips().find((x) => c.clipText(x.id) === 'from history')!
     const before = old.createdAt
     vi.setSystemTime(Date.now() + 5_000)
     await c.copyClip(old.id)
@@ -389,7 +391,7 @@ describe('copyClip', () => {
     // A genuinely new copy still gets recorded afterwards.
     c.electronState.clipboardText = 'brand new'
     await c.tick()
-    expect(c.listClips().map((x) => x.text)).toContain('brand new')
+    expect(c.listClips().map((x) => c.clipText(x.id))).toContain('brand new')
     c.stopClipboard()
   })
 
@@ -503,6 +505,72 @@ describe('deleted clips leave no trace on disk', () => {
     expect(onDisk(c.dir, marker)).toBe(true)
     remove(c)
     expect(onDisk(c.dir, marker)).toBe(false)
+  })
+})
+
+describe('lists over IPC', () => {
+  it('does not include the full text; clipText still returns it', async () => {
+    const c = await load()
+    const body = 'SECRET-' + 'x'.repeat(400)
+    c.electronState.clipboardText = body
+    c.startClipboard(c.db, c.dir)
+    await c.flush()
+    c.stopClipboard()
+    const [clip] = c.listClips()
+    expect(clip.text).toBeNull()
+    expect(clip.preview).toHaveLength(180)
+    expect(c.clipText(clip.id)).toBe(body)
+    expect(JSON.stringify(c.sent.at(-1)?.[1])).not.toContain(body)
+  })
+})
+
+describe('pausing while the Mac sleeps or the screen is locked', () => {
+  it('stops polling on lock-screen and suspend, and records the current clipboard once it wakes', async () => {
+    const c = await load()
+    c.startClipboard(c.db, c.dir)
+    await c.flush()
+    c.powerMonitor.fire('lock-screen')
+    c.electronState.clipboardText = 'while locked'
+    await c.tick()
+    expect(c.listClips()).toEqual([])
+    c.powerMonitor.fire('unlock-screen')
+    await c.flush()
+    expect(c.listClips().map((x) => x.preview)).toEqual(['while locked'])
+    c.powerMonitor.fire('suspend')
+    c.electronState.clipboardText = 'while asleep'
+    await c.tick()
+    expect(c.listClips().map((x) => x.preview)).toEqual(['while locked'])
+    c.powerMonitor.fire('resume')
+    await c.flush()
+    expect(c.listClips().map((x) => x.preview)).toEqual(['while asleep', 'while locked'])
+    c.stopClipboard()
+  })
+
+  it('starting twice and stopping twice is harmless, and resume does nothing before start', async () => {
+    const c = await load()
+    c.resumeClipboard()
+    c.startClipboard(c.db, c.dir)
+    c.startClipboard(c.db, c.dir)
+    await c.flush()
+    c.powerMonitor.fire('lock-screen')
+    c.powerMonitor.fire('lock-screen')
+    c.stopClipboard()
+    c.stopClipboard()
+    c.electronState.clipboardText = 'ignored'
+    await c.tick()
+    expect(c.listClips()).toEqual([])
+  })
+
+  it('does not resume after stopClipboard, even if the screen unlocks', async () => {
+    const c = await load()
+    c.startClipboard(c.db, c.dir)
+    await c.flush()
+    c.powerMonitor.fire('lock-screen')
+    c.stopClipboard()
+    c.powerMonitor.fire('unlock-screen')
+    c.electronState.clipboardText = 'after stop'
+    await c.tick()
+    expect(c.listClips()).toEqual([])
   })
 })
 

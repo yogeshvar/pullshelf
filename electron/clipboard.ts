@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { clipboard, ClipboardItem, nativeImage, type NativeImage } from 'electron'
+import { clipboard, ClipboardItem, nativeImage, powerMonitor, type NativeImage } from 'electron'
 import type Database from 'better-sqlite3'
 import type { Clip } from '../src/shared/types'
 import { scrub, type ClipRow } from './db'
@@ -19,18 +19,62 @@ let suppressText = ''
 let timer: NodeJS.Timeout | null = null
 let database: Database.Database | null = null
 let imageDir = ''
+let paused = false
+let watchingPower = false
 
 export function startClipboard(db: Database.Database, userData: string): void {
   database = db
   imageDir = join(userData, 'clips')
   mkdirSync(imageDir, { recursive: true })
+  paused = false
+  watchPower()
   void poll()
-  timer = setInterval(() => void poll(), 700)
+  armTimer()
 }
 
 export function stopClipboard(): void {
+  paused = false
   if (timer) clearInterval(timer)
   timer = null
+  unwatchPower()
+}
+
+export function pauseClipboard(): void {
+  paused = true
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
+}
+
+export function resumeClipboard(): void {
+  if (!paused || !database) return
+  paused = false
+  void poll()
+  armTimer()
+}
+
+function armTimer(): void {
+  if (timer || paused) return
+  timer = setInterval(() => void poll(), 700)
+}
+
+function watchPower(): void {
+  if (watchingPower) return
+  watchingPower = true
+  powerMonitor.on('lock-screen', pauseClipboard)
+  powerMonitor.on('suspend', pauseClipboard)
+  powerMonitor.on('unlock-screen', resumeClipboard)
+  powerMonitor.on('resume', resumeClipboard)
+}
+
+function unwatchPower(): void {
+  if (!watchingPower) return
+  watchingPower = false
+  powerMonitor.off('lock-screen', pauseClipboard)
+  powerMonitor.off('suspend', pauseClipboard)
+  powerMonitor.off('unlock-screen', resumeClipboard)
+  powerMonitor.off('resume', resumeClipboard)
 }
 
 export function listClips(): Clip[] {
@@ -230,7 +274,8 @@ function toClip(row: ClipRow): Clip {
     id: row.id,
     kind: row.kind,
     preview: row.preview,
-    text: row.text,
+    // Full text is fetched on demand via clipText(); sending it on every list would copy megabytes over IPC.
+    text: null,
     thumb: row.kind === 'image' ? thumbFor(row) : null,
     favorite: row.favorite === 1,
     createdAt: row.created_at
