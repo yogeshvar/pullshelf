@@ -129,8 +129,8 @@ page({
   body: `<section class="hero"><div class="wrap">
   <div class="hero-copy">
     <p class="eyebrow">For macOS · Free · Open source</p>
-    <h1>Your Mac's missing <em>shelf.</em></h1>
-    <p class="lede">Pull down a real terminal from the top of your screen, with your clipboard, files and notes beside it. Run Claude Code or Codex without a dedicated window. Let go and it slides back.</p>
+    <h1>A pull-down <em>terminal</em> for your Mac.</h1>
+    <p class="lede">It slides down from the top of the screen, with your clipboard, files and notes beside it. Run Claude Code or Codex without a dedicated window. Let go and it slides back.</p>
     <div class="cta"><a class="btn primary" href="download.html">Download for Mac</a><a class="btn" href="${REPO}">View on GitHub</a></div>
     ${install}
     <p class="fine">Apple Silicon · macOS 13+ · v0.1.1</p>
@@ -279,6 +279,11 @@ writeFileSync(resolve(docs, 'vercel.json'), JSON.stringify({
       { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' }
     ] },
     { source: '/assets/(.*)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] }
-  ]
+  ],
+  // /press was 404ing: the file is press.html. Same for the other pages.
+  rewrites: ['press', 'features', 'download', 'support', 'changelog', 'privacy'].map((name) => ({
+    source: `/${name}`,
+    destination: `/${name}.html`
+  }))
 }, null, 2) + '\n')
 console.log('site: wrote', urls.length + 1, 'pages')
