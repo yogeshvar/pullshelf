@@ -19,6 +19,7 @@ export async function bootMain(options: BootOptions = {}) {
   vi.resetModules()
   const electron = await import('../mocks/electron')
   electron.electronState.userData = tempDir('pullshelf-main-')
+  electron.electronState.logs = tempDir('pullshelf-logs-')
   if (options.singleInstanceLock !== undefined) electron.electronState.singleInstanceLock = options.singleInstanceLock
   if (options.ready) electron.electronState.ready = options.ready
   options.beforeImport?.(electron)
@@ -91,7 +92,9 @@ export const mockFactories = {
     setGestureVisible: vi.fn(),
     startGesture: vi.fn(),
     stopGesture: vi.fn(),
-    gestureTrusted: vi.fn(() => false)
+    gestureTrusted: vi.fn(() => false),
+    gestureRunning: vi.fn(() => true),
+    restartGesture: vi.fn()
   }),
   clipboard: () => ({
     clearHistory: vi.fn(() => []),

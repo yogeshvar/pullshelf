@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { openDatabase, readSettings, writeSettings } from '../../electron/db'
@@ -54,7 +54,15 @@ describe('starting up', () => {
     })
     await vi.waitFor(() => expect(m.app.quit).toHaveBeenCalled())
     expect(error).toHaveBeenCalledWith(expect.objectContaining({ message: 'no display' }))
+    // Quitting without a word looks like the app never launched: say what went wrong.
+    expect(m.dialog.showErrorBox).toHaveBeenCalledWith('Pullshelf could not start', expect.stringContaining('no display'))
     expect(m.BrowserWindow.instances).toHaveLength(0)
+  })
+
+  it('explains a start-up failure that is not an Error object', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const m = await bootMain({ ready: Promise.reject('display server gone'), waitForWindow: false })
+    await vi.waitFor(() => expect(m.dialog.showErrorBox).toHaveBeenCalledWith('Pullshelf could not start', 'display server gone'))
   })
 
   it('refuses to run on anything but macOS', async () => {
@@ -188,6 +196,64 @@ describe('app lifecycle events', () => {
     expect(prevent).not.toHaveBeenCalled()
     m.win().fire('closed')
     expect(() => m.listener().onDrag({ x: 0, y: 0, width: 1600, height: 900 }, 10, true)).not.toThrow()
+  })
+
+  it('starts with a fresh database when the old one is damaged, keeps the old file, and says so', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const m = await bootMain({
+      beforeImport: (e) => {
+        mkdirSync(e.electronState.userData, { recursive: true })
+        writeFileSync(join(e.electronState.userData, 'pullshelf.db'), 'garbage '.repeat(1000))
+      }
+    })
+    const state = (await m.ipcMain.invoke('app:get-state')) as { notes: unknown[] }
+    expect(state.notes).toEqual([])
+    const backups = readdirSync(m.electronState.userData).filter((name) => name.startsWith('pullshelf.db.corrupt-'))
+    expect(backups).toHaveLength(1)
+    expect(m.dialog.showMessageBox).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'warning', detail: expect.stringContaining(backups[0]) })
+    )
+  })
+
+  it('reloads the page after the renderer crashes, but stops after three crashes in a minute', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const m = await bootMain()
+    const contents = m.win().webContents
+    contents.fire('render-process-gone', {}, { reason: 'clean-exit', exitCode: 0 })
+    expect(contents.reload).not.toHaveBeenCalled()
+    for (let i = 0; i < 5; i += 1) contents.fire('render-process-gone', {}, { reason: 'crashed', exitCode: 11 })
+    expect(contents.reload).toHaveBeenCalledTimes(3)
+    expect(error).toHaveBeenCalledWith('[pullshelf] the page keeps crashing; not reloading it again')
+  })
+
+  it('reloads again once earlier crashes are more than a minute old', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const m = await bootMain()
+    vi.useFakeTimers({ toFake: ['Date'], now: 1_000_000 })
+    const contents = m.win().webContents
+    for (let i = 0; i < 3; i += 1) contents.fire('render-process-gone', {}, { reason: 'oom', exitCode: 1 })
+    vi.setSystemTime(1_000_000 + 61_000)
+    contents.fire('render-process-gone', {}, { reason: 'oom', exitCode: 1 })
+    expect(contents.reload).toHaveBeenCalledTimes(4)
+  })
+
+  it('does not reload a renderer whose window is already gone', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const m = await bootMain()
+    const contents = m.win().webContents
+    m.win().fire('closed')
+    contents.fire('render-process-gone', {}, { reason: 'crashed', exitCode: 11 })
+    expect(contents.reload).not.toHaveBeenCalled()
+  })
+
+  it('keeps a log file in the macOS Logs folder, starting with the version', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const m = await bootMain()
+    expect(m.app.getPath).toHaveBeenCalledWith('logs')
+    m.app.fire('child-process-gone', {}, { type: 'GPU', reason: 'crashed', exitCode: 5 })
+    const log = readFileSync(join(m.electronState.logs, 'main.log'), 'utf8')
+    expect(log).toMatch(/ INFO Pullshelf 9\.9\.9-test starting/)
+    expect(log).toMatch(/ ERROR \[pullshelf\] child process gone: GPU crashed 5/)
   })
 
   it('logs when a child process or the renderer dies', async () => {

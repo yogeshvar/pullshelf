@@ -16,7 +16,8 @@ function taken(path: string): boolean {
 
 // Renames without ever replacing something that is already there. Returns whether it moved.
 function move(from: string, to: string): boolean {
-  if (taken(to)) return false
+  // Optional files (-wal, -shm, the other legacy name) are often absent; that is not a failure.
+  if (taken(to) || !taken(from)) return false
   try {
     renameSync(from, to)
     return true

@@ -77,6 +77,27 @@ describe('updateNote', () => {
   })
 })
 
+describe('when the markdown mirror cannot be written', () => {
+  it('still saves the note in the database and logs the failure', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { id } = createNote()
+    rmSync(mirror(id))
+    mkdirSync(mirror(id)) // writing a file over a directory fails with EISDIR
+    expect(updateNote(id, 'kept in the db')?.body).toBe('kept in the db')
+    expect(noteBody(id)).toBe('kept in the db')
+    expect(sent.at(-1)?.[0]).toBe('notes:changed')
+    expect(error).toHaveBeenCalledWith('[pullshelf] could not write the markdown copy of a note:', expect.stringContaining('EISDIR'))
+  })
+
+  it('still creates a note when the notes folder has gone missing', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    rmSync(join(dir, 'notes'), { recursive: true })
+    writeFileSync(join(dir, 'notes'), 'not a folder')
+    expect(() => createNote()).not.toThrow()
+    expect(listNotes()).toHaveLength(1)
+  })
+})
+
 describe('renameNote', () => {
   it('returns null for an unknown note', () => {
     expect(renameNote('missing', 'x')).toBeNull()

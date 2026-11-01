@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs'
+import { chmodSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import Database from 'better-sqlite3'
-import { describe, expect, it } from 'vitest'
-import { openDatabase, readSettings, rebaseClipImagePaths, writeSettings } from '../../electron/db'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { openDatabase, openDatabaseOrRecover, readSettings, rebaseClipImagePaths, SCHEMA_VERSION, writeSettings } from '../../electron/db'
 import type { Settings } from '../../src/shared/types'
 import { tempDir } from '../helpers/tmp'
 
@@ -48,6 +48,118 @@ describe('openDatabase', () => {
     expect(db.prepare('SELECT id, title, title_locked FROM notes').all()).toEqual([
       { id: 'keep', title: 'Old note', title_locked: 0 }
     ])
+  })
+})
+
+describe('schema versions', () => {
+  const version = (db: ReturnType<typeof openDatabase>) => db.pragma('user_version', { simple: true })
+  const oldSchema = (path: string) => {
+    const old = new Database(path)
+    old.exec(`CREATE TABLE clips (id TEXT PRIMARY KEY, kind TEXT NOT NULL, text TEXT, image_path TEXT, preview TEXT NOT NULL,
+        favorite INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
+      CREATE TABLE notes (id TEXT PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL, title_locked INTEGER NOT NULL DEFAULT 0);
+      CREATE TABLE files (id TEXT PRIMARY KEY, path TEXT NOT NULL UNIQUE, name TEXT NOT NULL, added_at INTEGER NOT NULL);
+      CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);`)
+    return old
+  }
+
+  it('stamps a new database with the current schema version', () => {
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(2)
+    expect(version(openDatabase(tempDir()))).toBe(SCHEMA_VERSION)
+  })
+
+  it('upgrades a database from before versioning that already has every column, keeping its rows', () => {
+    const dir = tempDir()
+    const old = oldSchema(join(dir, 'pullshelf.db'))
+    old.prepare(`INSERT INTO notes VALUES ('n', 'Kept', 'body', 1, 2, 1)`).run()
+    old.close()
+    const db = openDatabase(dir)
+    expect(version(db)).toBe(SCHEMA_VERSION)
+    expect(db.prepare('SELECT id, title, title_locked FROM notes').all()).toEqual([{ id: 'n', title: 'Kept', title_locked: 1 }])
+  })
+
+  it('wipes clips deleted by older versions out of the file once, on upgrade', () => {
+    const dir = tempDir()
+    const old = oldSchema(join(dir, 'pullshelf.db'))
+    const marker = 'OLD-DELETED-SECRET-9d2e'
+    old.prepare(`INSERT INTO clips VALUES ('c', 'text', ?, NULL, ?, 0, 1)`).run(marker.repeat(50), marker)
+    old.prepare(`DELETE FROM clips`).run()
+    old.close()
+    expect(readFileSync(join(dir, 'pullshelf.db')).includes(marker)).toBe(true)
+    openDatabase(dir).close()
+    expect(readFileSync(join(dir, 'pullshelf.db')).includes(marker)).toBe(false)
+  })
+
+  it('leaves a database from a newer Pullshelf at its version', () => {
+    const dir = tempDir()
+    openDatabase(dir).pragma('user_version = 99')
+    expect(version(openDatabase(dir))).toBe(99)
+  })
+})
+
+describe('openDatabaseOrRecover', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  })
+
+  it('opens a healthy database as it is', () => {
+    const dir = tempDir()
+    writeSettings(openDatabase(dir), { presetId: 'shell', customCommand: '', cwd: '/kept', toolRatio: 0.4, clipRatio: 0.18, filesRatio: 0.2, heightRatio: 0.52, showTrayIcon: true })
+    const { db, backup } = openDatabaseOrRecover(dir)
+    expect(backup).toBeNull()
+    expect(readSettings(db, '/x').cwd).toBe('/kept')
+  })
+
+  it('moves an unreadable database (and its WAL files) aside and starts a fresh one', () => {
+    const dir = tempDir()
+    const garbage = Buffer.from('this is not sqlite at all, just bytes '.repeat(200))
+    writeFileSync(join(dir, 'pullshelf.db'), garbage)
+    writeFileSync(join(dir, 'pullshelf.db-wal'), 'wal')
+    writeFileSync(join(dir, 'pullshelf.db-shm'), 'shm')
+    const { db, backup } = openDatabaseOrRecover(dir)
+    expect(backup).toMatch(/pullshelf\.db\.corrupt-\d+$/)
+    expect(readFileSync(backup as string)).toEqual(garbage)
+    expect(readFileSync(`${backup}-wal`, 'utf8')).toBe('wal')
+    expect(existsSync(`${backup}-shm`)).toBe(true) // SQLite rewrites this index file itself; it holds no data
+    expect(names(db)).toEqual(expect.arrayContaining(['clips', 'files', 'notes', 'settings']))
+    expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION)
+  })
+
+  it('still recovers when only the main file is there', () => {
+    const dir = tempDir()
+    writeFileSync(join(dir, 'pullshelf.db'), 'x'.repeat(4096))
+    const { backup } = openDatabaseOrRecover(dir)
+    expect(readdirSync(dir).filter((name) => name.includes('corrupt'))).toEqual([backup?.split('/').at(-1)])
+  })
+
+  it('openDatabase itself reports a damaged file instead of handing back a broken handle', () => {
+    const dir = tempDir()
+    writeFileSync(join(dir, 'pullshelf.db'), 'y'.repeat(4096))
+    expect(() => openDatabase(dir)).toThrow(/not a database/)
+  })
+
+  it('rethrows a database it may not write to, and leaves the file where it is', () => {
+    const dir = tempDir()
+    const old = new Database(join(dir, 'pullshelf.db'))
+    old.exec('CREATE TABLE keep (x)')
+    old.close()
+    chmodSync(join(dir, 'pullshelf.db'), 0o444)
+    chmodSync(dir, 0o555)
+    try {
+      expect(() => openDatabaseOrRecover(dir)).toThrow(/readonly/i)
+      expect(readdirSync(dir)).toEqual(['pullshelf.db'])
+    } finally {
+      chmodSync(dir, 0o755)
+    }
+  })
+
+  it('does not move anything for errors that are not a damaged file', () => {
+    const parent = tempDir()
+    const notADir = join(parent, 'file')
+    writeFileSync(notADir, 'x')
+    expect(() => openDatabaseOrRecover(notADir)).toThrow()
+    expect(readdirSync(parent)).toEqual(['file'])
   })
 })
 

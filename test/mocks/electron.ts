@@ -8,6 +8,7 @@ export const electronState = {
   isPackaged: false,
   openAtLogin: false,
   userData: '/tmp/pullshelf-test-user-data',
+  logs: '/tmp/pullshelf-test-logs',
   workArea: { x: 0, y: 34, width: 1600, height: 900 },
   displayFrequency: 60,
   cursor: { x: 800, y: 400 },
@@ -81,6 +82,7 @@ export class FakeWebContents extends FakeEmitter {
   setWindowOpenHandler = vi.fn((handler: (details: { url: string }) => { action: string }) => {
     this.openHandler = handler
   })
+  reload = vi.fn()
   destroyed = false
   isDestroyed = vi.fn(() => this.destroyed)
 }
@@ -172,7 +174,8 @@ export const shell = {
 }
 
 export const dialog = {
-  showErrorBox: vi.fn()
+  showErrorBox: vi.fn(),
+  showMessageBox: vi.fn(async (_options: unknown) => ({ response: 0 }))
 }
 
 class FakeApp extends FakeEmitter {
@@ -180,8 +183,10 @@ class FakeApp extends FakeEmitter {
   requestSingleInstanceLock = vi.fn(() => electronState.singleInstanceLock)
   quit = vi.fn()
   whenReady = vi.fn(() => electronState.ready)
-  getPath = vi.fn((_name: string) => electronState.userData)
+  // On macOS 'logs' is ~/Library/Logs/<name>, a different folder from userData.
+  getPath = vi.fn((name: string) => (name === 'logs' ? electronState.logs : electronState.userData))
   getAppPath = vi.fn(() => '/app')
+  getVersion = vi.fn(() => '9.9.9-test')
   setActivationPolicy = vi.fn()
   setLoginItemSettings = vi.fn((settings: { openAtLogin: boolean }) => {
     electronState.openAtLogin = settings.openAtLogin
@@ -293,6 +298,7 @@ export function resetElectron(): void {
     isPackaged: false,
     openAtLogin: false,
     userData: '/tmp/pullshelf-test-user-data',
+    logs: '/tmp/pullshelf-test-logs',
     workArea: { x: 0, y: 34, width: 1600, height: 900 },
     displayFrequency: 60,
     cursor: { x: 800, y: 400 },

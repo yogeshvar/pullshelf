@@ -81,6 +81,17 @@ describe('the menu-bar icon', () => {
     expect(item(menu(m), 'Launch at login').checked).toBe(true)
   })
 
+  it('says when the scroll gesture helper is off, and restarts it from the menu', async () => {
+    const m = await booted()
+    m.gesture.gestureRunning.mockReturnValue(false)
+    const items = menu(m)
+    expect(item(items, 'Scroll gesture off — restart')).toMatchObject({ enabled: true })
+    expect(items.some((i) => i.label === 'Enable scroll gesture…')).toBe(false)
+    click(items, 'Scroll gesture off — restart')
+    expect(m.gesture.restartGesture).toHaveBeenCalled()
+    expect(m.gesture.promptGestureTrust).not.toHaveBeenCalled()
+  })
+
   it('menu items do what they say', async () => {
     const m = await booted()
     const items = menu(m)

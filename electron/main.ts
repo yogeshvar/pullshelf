@@ -13,10 +13,20 @@ import {
   Tray
 } from 'electron'
 import { attachWebContents } from './bus'
+import { logInfo, startLog } from './log'
 import { migrateLegacyData } from './migrate'
 import { clearHistory, copyClip, deleteClip, listClips, startClipboard, stopClipboard, toggleFavorite, clipText } from './clipboard'
-import { openDatabase, readSettings, rebaseClipImagePaths, writeSettings } from './db'
-import { promptGestureTrust, setGestureVisible, startGesture, stopGesture, gestureTrusted, type CocoaFrame } from './gesture'
+import { openDatabaseOrRecover, readSettings, rebaseClipImagePaths, writeSettings } from './db'
+import {
+  gestureRunning,
+  gestureTrusted,
+  promptGestureTrust,
+  restartGesture,
+  setGestureVisible,
+  startGesture,
+  stopGesture,
+  type CocoaFrame
+} from './gesture'
 import { addFiles, clearFiles, dragImage, fileInfo, filePath, listFiles, removeFile, startFiles } from './files'
 import { trayPng } from './icon'
 import { createNote, deleteNote, listNotes, noteBody, renameNote, startNotes, updateNote } from './notes'
@@ -37,7 +47,7 @@ if (process.platform !== 'darwin') {
   boot()
 }
 
-let database: ReturnType<typeof openDatabase> | null = null
+let database: ReturnType<typeof openDatabaseOrRecover>['db'] | null = null
 let win: BrowserWindow | null = null
 let tray: Tray | null = null
 let settings: Settings = {
@@ -90,13 +100,25 @@ function boot(): void {
   })
 
   app.whenReady().then(() => {
+    // ~/Library/Logs/Pullshelf/main.log: first, so everything after it (migration included) is recorded.
+    startLog(app.getPath('logs'))
+    logInfo(`Pullshelf ${app.getVersion()} starting`)
     app.setActivationPolicy('accessory')
     app.dock?.hide()
     const userData = app.getPath('userData')
     // Before Pullshelf the app was called Perch, and before that Ledge; bring the newest data along before the database opens.
     const legacyDirs = ['Perch', 'Ledge'].map((name) => join(dirname(userData), name))
     for (const legacyDir of legacyDirs) migrateLegacyData(userData, legacyDir)
-    database = openDatabase(userData)
+    const opened = openDatabaseOrRecover(userData)
+    database = opened.db
+    if (opened.backup) {
+      void dialog.showMessageBox({
+        type: 'warning',
+        message: 'Pullshelf started with an empty history',
+        detail: `Its database could not be read, so it was moved aside to ${opened.backup} and a new one was created. Nothing was deleted.`,
+        buttons: ['OK']
+      })
+    }
     for (const legacyDir of legacyDirs) rebaseClipImagePaths(database, legacyDir, userData)
     settings = readSettings(database, homedir())
     startNotes(database, userData)
@@ -113,6 +135,8 @@ function boot(): void {
     })
   }).catch((error: unknown) => {
     console.error(error)
+    // Quitting silently would look like the app never launched.
+    dialog.showErrorBox('Pullshelf could not start', error instanceof Error ? error.message : String(error))
     app.quit()
   })
 }
@@ -176,8 +200,20 @@ function createWindow(): void {
   win.webContents.on('will-navigate', (event, url) => {
     if (url !== win?.webContents.getURL()) event.preventDefault()
   })
-  win.webContents.on('render-process-gone', (_event, details) => {
+  const contents = win.webContents
+  const crashes: number[] = []
+  contents.on('render-process-gone', (_event, details) => {
     console.error('[pullshelf] renderer gone:', details.reason, details.exitCode)
+    if (details.reason === 'clean-exit' || !win) return
+    // Bring the page back, but not in a loop: at most three reloads a minute.
+    const now = Date.now()
+    while (crashes.length && now - crashes[0] > 60_000) crashes.shift()
+    if (crashes.length >= 3) {
+      console.error('[pullshelf] the page keeps crashing; not reloading it again')
+      return
+    }
+    crashes.push(now)
+    contents.reload()
   })
   app.on('child-process-gone', (_event, details) => {
     console.error('[pullshelf] child process gone:', details.type, details.reason, details.exitCode)
@@ -229,11 +265,14 @@ function buildMenu(): Menu {
         ]
       : []),
     { label: 'Hide menu bar icon', click: () => setTrayVisible(false) },
-    {
-      label: gestureTrusted() ? 'Scroll gesture on' : 'Enable scroll gesture…',
-      enabled: !gestureTrusted(),
-      click: () => promptGestureTrust()
-    },
+    gestureRunning()
+      ? {
+          label: gestureTrusted() ? 'Scroll gesture on' : 'Enable scroll gesture…',
+          enabled: !gestureTrusted(),
+          click: () => promptGestureTrust()
+        }
+      : // The helper crashed too often (or could not launch): say so instead of claiming it works.
+        { label: 'Scroll gesture off — restart', enabled: true, click: () => restartGesture() },
     {
       label: 'Toggle Developer Tools',
       visible: !app.isPackaged,
@@ -392,8 +431,13 @@ function registerIpc(): void {
       }
     }
   })
-  ipcMain.handle('clips:copy', (_event, id: unknown) => {
-    if (typeof id === 'string') copyClip(id)
+  ipcMain.handle('clips:copy', async (_event, id: unknown) => {
+    if (typeof id !== 'string') return
+    try {
+      await copyClip(id)
+    } catch (error) {
+      console.error('[pullshelf] could not copy the clip:', error instanceof Error ? error.message : String(error))
+    }
   })
   ipcMain.handle('clips:favorite', (_event, id: unknown) => {
     if (typeof id !== 'string') return listClips()

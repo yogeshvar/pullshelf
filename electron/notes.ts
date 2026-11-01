@@ -108,9 +108,15 @@ export function noteBody(id: string): string | null {
   return row?.body ?? null
 }
 
+// The database is the source of truth; the .md files are a convenience copy, so a failed write
+// (full disk, folder replaced, permissions) is logged instead of losing the edit.
 function writeMarkdown(note: Note): void {
   if (!notesDir) return
-  writeFileSync(join(notesDir, `${note.id}.md`), note.body, 'utf8')
+  try {
+    writeFileSync(join(notesDir, `${note.id}.md`), note.body, 'utf8')
+  } catch (error) {
+    console.error('[pullshelf] could not write the markdown copy of a note:', (error as Error).message)
+  }
 }
 
 function titleFromBody(body: string): string {
