@@ -70,7 +70,7 @@ function nav(current) {
 
 const foot = `<footer><div class="wrap foot"><div><a class="brand" href="index.html"><i></i>Pullshelf</a><p>A pull-down shelf for the Mac.<br>MIT licensed. No telemetry.</p>
 <p>Not affiliated with Anthropic or OpenAI.</p></div>
-<ul><li><a href="features.html">Features</a></li><li><a href="download.html">Download</a></li><li><a href="support.html">Support</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="privacy.html">Privacy</a></li><li><a href="press.html">Press</a></li><li><a href="${REPO}">GitHub</a></li></ul></div></footer>
+<ul><li><a href="features.html">Features</a></li><li><a href="download.html">Download</a></li><li><a href="support.html">Support</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="privacy.html">Privacy</a></li><li><a href="terms.html">Terms</a></li><li><a href="press.html">Press</a></li><li><a href="${REPO}">GitHub</a></li></ul></div></footer>
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};window.si=window.si||function(){(window.siq=window.siq||[]).push(arguments)}</script>
 <script defer src="/_vercel/insights/script.js"></script><script defer src="/_vercel/speed-insights/script.js"></script>
 <script src="assets/vendor/gsap.min.js" defer></script><script src="assets/vendor/ScrollTrigger.min.js" defer></script><script src="assets/vendor/lenis.min.js" defer></script><script src="assets/site.js" defer></script>
@@ -251,6 +251,19 @@ page({
 })
 
 page({
+  file: 'terms.html', current: 'terms.html',
+  title: 'Terms | Pullshelf', desc: 'Terms for using Pullshelf and this website. Free, MIT licensed, provided as is.',
+  body: `<div class="page"><div class="wrap prose"><p class="eyebrow">Terms</p><h1>Simple terms</h1>
+<p>Pullshelf is free and open source software under the <a href="https://opensource.org/license/mit">MIT license</a>. By downloading, installing or using the app, or by using this website, you agree to these terms.</p>
+<h2>The software</h2><p>Pullshelf is provided <strong>as is</strong>, without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. The authors are not liable for any claim, damages or other liability arising from the software or its use. See the full MIT license text in the repository.</p>
+<h2>What you may do</h2><p>You may use, copy, modify and distribute Pullshelf under the MIT license. You do not need an account. There is no paid tier on this site.</p>
+<h2>What this site is</h2><p>This website describes Pullshelf and links to downloads on GitHub and Homebrew. It is not a store, subscription service or marketplace. Product names mentioned for context (for example Claude Code or Codex) belong to their owners; Pullshelf is not affiliated with Anthropic or OpenAI.</p>
+<h2>Limits</h2><p>Honest product limits are stated on the site: Apple Silicon, macOS 13 or newer, and the app is not notarized by Apple yet. First launch may require Open Anyway in System Settings. Use at your own risk on your own machine.</p>
+<h2>Privacy</h2><p>How data is handled is described on the <a href="privacy.html">privacy page</a>. The app makes no network calls of its own. This website sets no cookies; optional first-party Vercel analytics are cookieless.</p>
+<p class="fine">Last updated 2 November 2026.</p></div></div>`
+})
+
+page({
   file: 'press.html', current: 'press.html',
   title: 'Press kit | Pullshelf', desc: 'Pullshelf in one line, screenshots and the app icon for writers and reviewers.',
   body: `<div class="page"><div class="wrap prose"><p class="eyebrow">Press</p><h1>Press kit</h1>
@@ -267,7 +280,7 @@ page({
   body: `<div class="page"><div class="wrap"><p class="eyebrow">404</p><h1>Nothing on <em>this</em> shelf.</h1><p class="lede">That page doesn't exist. <a href="index.html">Back to Pullshelf</a>.</p></div></div>`
 })
 
-const urls = ['', 'features.html', 'download.html', 'support.html', 'changelog.html', 'privacy.html', 'press.html']
+const urls = ['', 'features.html', 'download.html', 'support.html', 'changelog.html', 'privacy.html', 'terms.html', 'press.html']
 writeFileSync(resolve(docs, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${SITE}/${u}</loc></url>`).join('\n')}\n</urlset>\n`)
 writeFileSync(resolve(docs, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`)
 writeFileSync(resolve(docs, 'vercel.json'), JSON.stringify({
@@ -281,7 +294,7 @@ writeFileSync(resolve(docs, 'vercel.json'), JSON.stringify({
     { source: '/assets/(.*)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] }
   ],
   // /press was 404ing: the file is press.html. Same for the other pages.
-  rewrites: ['press', 'features', 'download', 'support', 'changelog', 'privacy'].map((name) => ({
+  rewrites: ['press', 'features', 'download', 'support', 'changelog', 'privacy', 'terms'].map((name) => ({
     source: `/${name}`,
     destination: `/${name}.html`
   }))
