@@ -21,14 +21,24 @@ export function ClipboardPane({
     window.setTimeout(() => setCopiedId((current) => (current === clip.id ? null : current)), 1200)
   }
 
-  async function send(text: string) {
-    const result = await window.pullshelf.sendToTool(text)
-    onToast(result.ok ? 'Sent to the tool' : result.error ?? 'Could not send')
+  async function withText(clip: Clip, use: (text: string) => Promise<void>) {
+    const text = await window.pullshelf.clipText(clip.id)
+    if (!text) return
+    await use(text)
   }
 
-  async function claude(text: string) {
-    const result = await window.pullshelf.openInClaude(text, 'chat')
-    if (!result.ok) onToast(result.error ?? 'Could not open Claude Desktop')
+  async function send(clip: Clip) {
+    await withText(clip, async (text) => {
+      const result = await window.pullshelf.sendToTool(text)
+      onToast(result.ok ? 'Sent to the tool' : result.error ?? 'Could not send')
+    })
+  }
+
+  async function claude(clip: Clip) {
+    await withText(clip, async (text) => {
+      const result = await window.pullshelf.openInClaude(text, 'chat')
+      if (!result.ok) onToast(result.error ?? 'Could not open Claude Desktop')
+    })
   }
 
   return (
@@ -49,12 +59,12 @@ export function ClipboardPane({
               </button>
               <div className="clip-meta">
                 <span>{copiedId === clip.id ? 'Copied' : age(clip.createdAt)}</span>
-                {clip.text ? (
+                {clip.kind === 'text' ? (
                   <>
-                    <button type="button" onClick={() => void send(clip.text as string)}>
+                    <button type="button" onClick={() => void send(clip)}>
                       Send
                     </button>
-                    <button type="button" onClick={() => void claude(clip.text as string)}>
+                    <button type="button" onClick={() => void claude(clip)}>
                       Claude
                     </button>
                   </>

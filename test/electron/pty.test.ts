@@ -257,6 +257,7 @@ describe('output and exit', () => {
   it('buffers output with increasing revisions and forwards each chunk', async () => {
     const p = await load()
     await p.start(settings())
+    p.last().emitData('')
     p.last().emitData('hello ')
     p.last().emitData('world')
     expect(p.snapshot()).toEqual({ buffer: 'hello world', rev: 2 })
@@ -264,6 +265,14 @@ describe('output and exit', () => {
       { rev: 1, chunk: 'hello ' },
       { rev: 2, chunk: 'world' }
     ])
+  })
+
+  it('keeps only the last 200,000 characters even when they arrive as thousands of tiny chunks', async () => {
+    const p = await load()
+    await p.start(settings())
+    for (let i = 0; i < 250; i += 1) p.last().emitData('x'.repeat(1_000))
+    expect(p.snapshot().buffer).toBe('x'.repeat(200_000))
+    expect(p.snapshot().rev).toBe(250)
   })
 
   it('keeps only the last 200,000 characters of scrollback', async () => {

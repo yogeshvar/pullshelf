@@ -1,6 +1,7 @@
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
+import { cspPlugin } from './src/shared/csp'
 
 export default defineConfig({
   main: {
@@ -23,7 +24,7 @@ export default defineConfig({
   },
   renderer: {
     root: resolve('src'),
-    plugins: [react()],
+    plugins: [react(), cspPlugin()],
     build: {
       rolldownOptions: {
         input: resolve('src/index.html')

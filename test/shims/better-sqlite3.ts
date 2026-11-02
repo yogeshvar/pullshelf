@@ -15,8 +15,12 @@ export default class Database {
     this.db = new DatabaseSync(path)
   }
 
-  pragma(): void {
-    // WAL and friends are irrelevant for tests.
+  // Same contract as better-sqlite3: rows by default, the first column of the first row with { simple: true }.
+  pragma(source: string, options: { simple?: boolean } = {}): unknown {
+    const rows = this.db.prepare(`PRAGMA ${source}`).all() as Record<string, unknown>[]
+    if (!options.simple) return rows
+    const [first] = rows
+    return first ? Object.values(first)[0] : undefined
   }
 
   exec(sql: string): void {

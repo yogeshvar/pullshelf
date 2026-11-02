@@ -85,6 +85,14 @@ describe('migrateLegacyData', () => {
     expect(readdirSync(pullshelf)).toEqual(['pullshelf.db'])
   })
 
+  it('does not log a failure for -wal or -shm files that were never there', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { pullshelf, ledge } = support()
+    put(ledge, 'ledge.db', 'db')
+    migrateLegacyData(pullshelf, ledge)
+    expect(error).not.toHaveBeenCalled()
+  })
+
   it('leaves everything alone when Perch already has a database', () => {
     const { pullshelf, ledge } = support()
     put(ledge, 'ledge.db', 'old')

@@ -210,6 +210,27 @@ describe('claude:open', () => {
   })
 })
 
+describe('clipboard handlers that fail', () => {
+  it('waits for the copy, and a clipboard that refuses the write is logged instead of left unhandled', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const m = await bootMain()
+    let finish: () => void = () => undefined
+    m.clipboard.copyClip.mockImplementationOnce(() => new Promise<void>((resolve) => (finish = resolve)))
+    let settled = false
+    const pending = m.ipcMain.invoke('clips:copy', 'c1').then(() => (settled = true))
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    finish()
+    await pending
+    m.clipboard.copyClip.mockRejectedValueOnce(new Error('pasteboard busy'))
+    await expect(m.ipcMain.invoke('clips:copy', 'c2')).resolves.toBeUndefined()
+    expect(error).toHaveBeenCalledWith('[pullshelf] could not copy the clip:', 'pasteboard busy')
+    m.clipboard.copyClip.mockRejectedValueOnce('locked')
+    await m.ipcMain.invoke('clips:copy', 'c3')
+    expect(error).toHaveBeenCalledWith('[pullshelf] could not copy the clip:', 'locked')
+  })
+})
+
 describe('clipboard handlers', () => {
   it('pass string ids through and refuse other types', async () => {
     const m = await bootMain()

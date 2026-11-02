@@ -14,19 +14,40 @@ type Listener = {
 let child: ChildProcessWithoutNullStreams | null = null
 let trusted = false
 let restarts = 0
+let retryTimer: NodeJS.Timeout | null = null
+let savedListener: Listener | null = null
+
+// A crashing helper is retried after 1, 2, 4, 8 and 16 seconds, then left off until restartGesture().
+const MAX_RESTARTS = 5
+// A helper that stayed up this long was healthy: its crash starts a fresh round of retries.
+const STABLE_MS = 60_000
 
 export function gestureTrusted(): boolean {
   return trusted
 }
 
+/** Whether a helper process is currently running (false while waiting to retry, or after giving up). */
+export function gestureRunning(): boolean {
+  return child !== null
+}
+
 export function startGesture(listener: Listener): void {
+  savedListener = listener
   const binary = helperPath()
   if (!binary) {
     console.error('Gesture helper is missing. Run npm run compile:gesture.')
     return
   }
-  const proc = spawn(binary, [], { stdio: ['pipe', 'pipe', 'pipe'] })
+  let proc: ChildProcessWithoutNullStreams
+  try {
+    proc = spawn(binary, [], { stdio: ['pipe', 'pipe', 'pipe'] })
+  } catch (error) {
+    console.error('[gesture] helper failed:', (error as Error).message)
+    scheduleRestart(listener)
+    return
+  }
   child = proc
+  const startedAt = Date.now()
   let pending = ''
   proc.stdout.on('data', (buf: Buffer) => {
     pending += buf.toString('utf8')
@@ -42,14 +63,40 @@ export function startGesture(listener: Listener): void {
     const text = buf.toString('utf8').trim()
     if (text) console.error(text)
   })
-  proc.on('exit', () => {
+  const gone = () => {
     if (child !== proc) return
     child = null
-    if (restarts < 2) {
-      restarts += 1
-      setTimeout(() => startGesture(listener), 1000)
-    }
+    if (Date.now() - startedAt >= STABLE_MS) restarts = 0
+    scheduleRestart(listener)
+  }
+  // Without an 'error' listener a helper that cannot launch (ENOENT, EACCES) would crash the app.
+  proc.on('error', (error: Error) => {
+    console.error('[gesture] helper failed:', error.message)
+    gone()
   })
+  proc.on('exit', gone)
+}
+
+/** Start the helper again after it gave up (from the menu), with a fresh set of retries. */
+export function restartGesture(): void {
+  if (child || !savedListener) return
+  if (retryTimer) clearTimeout(retryTimer)
+  retryTimer = null
+  restarts = 0
+  startGesture(savedListener)
+}
+
+function scheduleRestart(listener: Listener): void {
+  if (restarts >= MAX_RESTARTS) {
+    console.error('[gesture] helper keeps stopping; the scroll gesture is off until it is restarted from the menu.')
+    return
+  }
+  const delay = 1000 * 2 ** restarts
+  restarts += 1
+  retryTimer = setTimeout(() => {
+    retryTimer = null
+    startGesture(listener)
+  }, delay)
 }
 
 export function setGestureVisible(visible: boolean): void {
@@ -61,7 +108,8 @@ export function promptGestureTrust(): void {
 }
 
 export function stopGesture(): void {
-  restarts = 99
+  if (retryTimer) clearTimeout(retryTimer)
+  retryTimer = null
   child?.kill()
   child = null
 }

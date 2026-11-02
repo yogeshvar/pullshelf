@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import Database from 'better-sqlite3'
 import type { Settings } from '../src/shared/types'
@@ -40,44 +40,109 @@ const DEFAULT_SETTINGS: Settings = {
   showTrayIcon: true
 }
 
+// Each step moves the schema up one version (PRAGMA user_version). Step 1 is the schema from before
+// versioning existed, so it must also accept a database that already has some or all of it.
+const MIGRATIONS: ((db: Database.Database) => void)[] = [
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS clips (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        text TEXT,
+        image_path TEXT,
+        preview TEXT NOT NULL,
+        favorite INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS notes (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS files (
+        id TEXT PRIMARY KEY,
+        path TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        added_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `)
+    if (!db.prepare(`SELECT 1 FROM pragma_table_info('notes') WHERE name = 'title_locked'`).get()) {
+      db.exec('ALTER TABLE notes ADD COLUMN title_locked INTEGER NOT NULL DEFAULT 0')
+    }
+  },
+  // Versions before secure_delete left deleted clips and notes in the file's free pages; rewrite it once.
+  (db) => {
+    db.exec('VACUUM')
+  }
+]
+
+export const SCHEMA_VERSION = MIGRATIONS.length
+
+function migrate(db: Database.Database): void {
+  const current = Number(db.pragma('user_version', { simple: true }))
+  // A database from a newer Pullshelf is left alone rather than downgraded.
+  for (let version = current; version < SCHEMA_VERSION; version += 1) {
+    MIGRATIONS[version](db)
+    db.pragma(`user_version = ${version + 1}`)
+  }
+}
+
 export function openDatabase(userData: string): Database.Database {
   mkdirSync(userData, { recursive: true })
   const db = new Database(join(userData, 'pullshelf.db'))
-  db.pragma('journal_mode = WAL')
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS clips (
-      id TEXT PRIMARY KEY,
-      kind TEXT NOT NULL,
-      text TEXT,
-      image_path TEXT,
-      preview TEXT NOT NULL,
-      favorite INTEGER NOT NULL DEFAULT 0,
-      created_at INTEGER NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS notes (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      body TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS files (
-      id TEXT PRIMARY KEY,
-      path TEXT NOT NULL UNIQUE,
-      name TEXT NOT NULL,
-      added_at INTEGER NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-  `)
   try {
-    db.exec('ALTER TABLE notes ADD COLUMN title_locked INTEGER NOT NULL DEFAULT 0')
-  } catch {
-    // Column already exists.
+    prepare(db)
+  } catch (error) {
+    db.close()
+    throw error
   }
   return db
+}
+
+function prepare(db: Database.Database): void {
+  db.pragma('journal_mode = WAL')
+  // Zero out deleted rows so cleared clips and notes do not linger in the file's free pages.
+  db.pragma('secure_delete = ON')
+  migrate(db)
+}
+
+const DAMAGED = /file is not a database|database disk image is malformed/i
+
+/**
+ * Opens the database; if the file is damaged, moves it (and its -wal/-shm files) aside as
+ * pullshelf.db.corrupt-<time> and starts a fresh one. Nothing is deleted. Other errors are rethrown.
+ */
+export function openDatabaseOrRecover(userData: string): { db: Database.Database; backup: string | null } {
+  mkdirSync(userData, { recursive: true })
+  const file = join(userData, 'pullshelf.db')
+  const db = new Database(file)
+  try {
+    prepare(db)
+    return { db, backup: null }
+  } catch (error) {
+    if (!DAMAGED.test(String((error as Error).message))) {
+      db.close()
+      throw error
+    }
+    // Move the files while the handle is still open: closing it would delete the -wal and -shm files.
+    const backup = `${file}.corrupt-${Date.now()}`
+    for (const suffix of ['', '-wal', '-shm']) {
+      if (existsSync(file + suffix)) renameSync(file + suffix, backup + suffix)
+    }
+    db.close()
+    console.error(`[pullshelf] the database could not be read; moved it to ${backup} and started fresh`, error)
+    return { db: openDatabase(userData), backup }
+  }
+}
+
+export function scrub(db: Database.Database): void {
+  db.pragma('wal_checkpoint(TRUNCATE)')
 }
 
 export function readSettings(db: Database.Database, fallbackCwd: string): Settings {

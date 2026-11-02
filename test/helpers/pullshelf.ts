@@ -53,6 +53,7 @@ export function installPullshelf(state: AppState = makeState(), overrides: Recor
     sendToTool: ok(),
     openInClaude: ok(),
     copyClip: vi.fn(async (_id: string) => undefined),
+    clipText: vi.fn(async (id: string) => state.clips.find((clip) => clip.id === id)?.text ?? null),
     toggleFavorite: vi.fn(async (_id: string) => [] as Clip[]),
     deleteClip: vi.fn(async (_id: string) => [] as Clip[]),
     clearHistory: vi.fn(async () => [] as Clip[]),

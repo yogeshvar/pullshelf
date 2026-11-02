@@ -138,20 +138,92 @@ describe('reading the helper output', () => {
 })
 
 describe('restarting and stopping', () => {
-  it('restarts a crashed helper twice, one second apart, then gives up', async () => {
+  it('restarts a crashed helper with a growing delay, then gives up after five tries', async () => {
+    vi.useFakeTimers()
+    const g = await load()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    g.startGesture(g.listener)
+    for (const [i, delay] of [1000, 2000, 4000, 8000, 16000].entries()) {
+      spawned[i].emit('exit', 1)
+      await vi.advanceTimersByTimeAsync(delay - 1)
+      expect(spawned).toHaveLength(i + 1)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(spawned).toHaveLength(i + 2)
+    }
+    spawned[5].emit('exit', 1)
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(spawned).toHaveLength(6)
+    expect(g.gestureRunning()).toBe(false)
+  })
+
+  it('forgets earlier crashes once a helper has stayed up for a minute', async () => {
     vi.useFakeTimers()
     const g = await load()
     g.startGesture(g.listener)
-    spawned[0].emit('exit')
-    expect(spawned).toHaveLength(1)
+    spawned[0].emit('exit', 1)
+    await vi.advanceTimersByTimeAsync(1000)
+    spawned[1].emit('exit', 1)
+    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(60_000)
+    spawned[2].emit('exit', 1)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(spawned).toHaveLength(4)
+  })
+
+  it('survives a helper that cannot be launched, logs why, and retries', async () => {
+    vi.useFakeTimers()
+    const g = await load()
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    g.startGesture(g.listener)
+    const failure = Object.assign(new Error('spawn EACCES'), { code: 'EACCES' })
+    expect(() => spawned[0].emit('error', failure)).not.toThrow()
+    expect(error).toHaveBeenCalledWith('[gesture] helper failed:', 'spawn EACCES')
+    expect(g.gestureRunning()).toBe(false)
+    spawned[0].emit('exit', null) // an exit after the error must not schedule a second restart
     await vi.advanceTimersByTimeAsync(1000)
     expect(spawned).toHaveLength(2)
-    spawned[1].emit('exit')
+    expect(g.gestureRunning()).toBe(true)
+  })
+
+  it('survives spawn itself throwing', async () => {
+    vi.useFakeTimers()
+    const g = await load()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    g.spawn.mockImplementationOnce(() => {
+      throw new Error('bad args')
+    })
+    expect(() => g.startGesture(g.listener)).not.toThrow()
+    expect(g.gestureRunning()).toBe(false)
     await vi.advanceTimersByTimeAsync(1000)
-    expect(spawned).toHaveLength(3)
-    spawned[2].emit('exit')
-    await vi.advanceTimersByTimeAsync(5000)
-    expect(spawned).toHaveLength(3)
+    expect(spawned).toHaveLength(1)
+    expect(g.gestureRunning()).toBe(true)
+  })
+
+  it('restartGesture brings back a helper that gave up, with a fresh set of retries', async () => {
+    vi.useFakeTimers()
+    const g = await load()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    g.startGesture(g.listener)
+    for (let i = 0; i < 6; i += 1) {
+      spawned[i].emit('exit', 1)
+      await vi.advanceTimersByTimeAsync(20_000)
+    }
+    expect(g.gestureRunning()).toBe(false)
+    g.restartGesture()
+    expect(spawned).toHaveLength(7)
+    expect(g.gestureRunning()).toBe(true)
+    spawned[6].emit('exit', 1)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(spawned).toHaveLength(8)
+  })
+
+  it('restartGesture does nothing while a helper is running, or before one was ever started', async () => {
+    const g = await load()
+    g.restartGesture()
+    expect(spawned).toHaveLength(0)
+    g.startGesture(g.listener)
+    g.restartGesture()
+    expect(spawned).toHaveLength(1)
   })
 
   it('ignores the exit of a helper that was already replaced', async () => {
@@ -173,6 +245,27 @@ describe('restarting and stopping', () => {
     spawned[0].emit('exit')
     await vi.advanceTimersByTimeAsync(5000)
     expect(spawned).toHaveLength(1)
+  })
+
+  it('stopGesture cancels a retry that is already scheduled', async () => {
+    vi.useFakeTimers()
+    const g = await load()
+    g.startGesture(g.listener)
+    spawned[0].emit('exit', 1)
+    g.stopGesture()
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(spawned).toHaveLength(1)
+  })
+
+  it('restartGesture during a scheduled retry starts at once and does not start twice', async () => {
+    vi.useFakeTimers()
+    const g = await load()
+    g.startGesture(g.listener)
+    spawned[0].emit('exit', 1)
+    g.restartGesture()
+    expect(spawned).toHaveLength(2)
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(spawned).toHaveLength(2)
   })
 
   it('stopGesture with no helper running is harmless', async () => {

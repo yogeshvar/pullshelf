@@ -3,8 +3,16 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type Database from 'better-sqlite3'
 import type { Note } from '../src/shared/types'
-import type { NoteRow } from './db'
+import { scrub, type NoteRow } from './db'
 import { emit } from './bus'
+
+// Notes are always created with randomUUID(); anything else from the renderer is refused,
+// so an id can never steer a file path outside the notes folder.
+const NOTE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function isNoteId(id: string): boolean {
+  return NOTE_ID.test(id)
+}
 
 let database: Database.Database | null = null
 let notesDir = ''
@@ -43,6 +51,7 @@ export function createNote(): Note {
 }
 
 export function updateNote(id: string, body: string): Note | null {
+  if (!isNoteId(id)) return null
   const row = database?.prepare('SELECT * FROM notes WHERE id = ?').get(id) as NoteRow | undefined
   if (!row || !database) return null
   const nextBody = body.slice(0, 200_000)
@@ -62,6 +71,7 @@ export function updateNote(id: string, body: string): Note | null {
 }
 
 export function renameNote(id: string, title: string): Note | null {
+  if (!isNoteId(id)) return null
   const row = database?.prepare('SELECT * FROM notes WHERE id = ?').get(id) as NoteRow | undefined
   if (!row || !database) return null
   const clean = title.replace(/\s+/g, ' ').trim().slice(0, 80)
@@ -74,11 +84,16 @@ export function renameNote(id: string, title: string): Note | null {
 }
 
 export function deleteNote(id: string): Note[] {
-  database?.prepare('DELETE FROM notes WHERE id = ?').run(id)
-  try {
-    rmSync(join(notesDir, `${id}.md`), { force: true })
-  } catch {
-    // The markdown mirror is already gone.
+  // Only a note that really exists gets its markdown mirror removed.
+  const removed =
+    isNoteId(id) && database !== null && Number(database.prepare('DELETE FROM notes WHERE id = ?').run(id).changes) > 0
+  if (removed) {
+    scrub(database as Database.Database)
+    try {
+      rmSync(join(notesDir, `${id}.md`), { force: true })
+    } catch {
+      // The markdown mirror is already gone.
+    }
   }
   const notes = listNotes()
   emit('notes:changed', notes)
@@ -86,15 +101,22 @@ export function deleteNote(id: string): Note[] {
 }
 
 export function noteBody(id: string): string | null {
+  if (!isNoteId(id)) return null
   const row = database?.prepare('SELECT body FROM notes WHERE id = ?').get(id) as
     | { body: string }
     | undefined
   return row?.body ?? null
 }
 
+// The database is the source of truth; the .md files are a convenience copy, so a failed write
+// (full disk, folder replaced, permissions) is logged instead of losing the edit.
 function writeMarkdown(note: Note): void {
   if (!notesDir) return
-  writeFileSync(join(notesDir, `${note.id}.md`), note.body, 'utf8')
+  try {
+    writeFileSync(join(notesDir, `${note.id}.md`), note.body, 'utf8')
+  } catch (error) {
+    console.error('[pullshelf] could not write the markdown copy of a note:', (error as Error).message)
+  }
 }
 
 function titleFromBody(body: string): string {

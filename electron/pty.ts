@@ -9,7 +9,8 @@ const SCROLLBACK_LIMIT = 200_000
 
 let proc: pty.IPty | null = null
 let generation = 0
-let buffer = ''
+let chunks: string[] = []
+let stored = 0
 let rev = 0
 let cols = 100
 let rows = 28
@@ -31,7 +32,7 @@ export function isRunning(): boolean {
 }
 
 export function snapshot(): PtySnapshot {
-  return { buffer, rev }
+  return { buffer: chunks.join(''), rev }
 }
 
 export function resize(nextCols: number, nextRows: number): void {
@@ -69,7 +70,8 @@ export function sendText(text: string): { ok: boolean; error?: string } {
 export async function start(settings: Settings): Promise<void> {
   const gen = ++generation
   stopProcess()
-  buffer = ''
+  chunks = []
+  stored = 0
   rev = 0
   emit('pty:reset')
   status = {
@@ -111,7 +113,8 @@ export async function start(settings: Settings): Promise<void> {
     publishStatus()
     child.onData((chunk) => {
       if (proc !== child) return
-      buffer = (buffer + chunk).slice(-SCROLLBACK_LIMIT)
+      if (!chunk) return
+      appendScrollback(chunk)
       rev += 1
       emit('pty:data', { rev, chunk })
     })
@@ -137,6 +140,22 @@ export function stop(): void {
   stopProcess()
   status = { ...status, running: false }
   publishStatus()
+}
+
+function appendScrollback(chunk: string): void {
+  chunks.push(chunk)
+  stored += chunk.length
+  while (stored > SCROLLBACK_LIMIT && chunks.length) {
+    const extra = stored - SCROLLBACK_LIMIT
+    const first = chunks[0]
+    if (first.length <= extra) {
+      chunks.shift()
+      stored -= first.length
+    } else {
+      chunks[0] = first.slice(extra)
+      stored -= extra
+    }
+  }
 }
 
 function stopProcess(): void {

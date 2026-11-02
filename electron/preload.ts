@@ -33,6 +33,7 @@ const pullshelf = {
   openInClaude: (text: string, mode: 'chat' | 'code'): Promise<ActionResult> =>
     ipcRenderer.invoke('claude:open', text, mode),
   copyClip: (id: string): Promise<void> => ipcRenderer.invoke('clips:copy', id),
+  clipText: (id: string): Promise<string | null> => ipcRenderer.invoke('clips:text', id),
   toggleFavorite: (id: string): Promise<Clip[]> => ipcRenderer.invoke('clips:favorite', id),
   deleteClip: (id: string): Promise<Clip[]> => ipcRenderer.invoke('clips:delete', id),
   clearHistory: (): Promise<Clip[]> => ipcRenderer.invoke('clips:clear'),
